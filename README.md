@@ -23,3 +23,8 @@ python tests/test_casa.py
 ```
 
 Autor: Jorge Recabarren
+
+## Railway
+`railway.json` (y `Procfile`) le dicen a Railway cómo arrancar la app:
+`streamlit run app.py --server.port $PORT --server.address 0.0.0.0`.
+Las claves van en **Variables** del servicio en Railway: `GEMINI_API_KEY` y, opcional, `PEXELS_API_KEY`.

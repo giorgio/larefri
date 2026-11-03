@@ -80,7 +80,8 @@ def lo_que_tiene() -> list[str]:
     s = st.session_state
     extra = c.separar_lista(s.get("extra_txt", ""))
     vistos, out = set(), []
-    for x in list(s.get("comunes") or []) + extra:
+    marcados = [x for i, x in enumerate(c.COMUNES) if s.get(f"ing_{i}")]
+    for x in marcados + extra:
         k = n._clave(x)
         if k and k not in vistos:
             vistos.add(k)
@@ -99,6 +100,7 @@ def sello_falta(r) -> str:
 
 
 ESTILOS = """<style>
+@import url('https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap');
 .dp-sello { display:flex; align-items:baseline; gap:.55rem; background:#0E9C98; color:#fff; border-radius:14px;
   padding:.55rem .9rem; margin:.35rem 0 .3rem; }
 .dp-sello b { font-size:1.7rem; font-weight:800; letter-spacing:-.03em; }
@@ -113,6 +115,34 @@ ESTILOS = """<style>
 .dp-banner .cero { background:#0E9C98; border-color:#0E9C98; }
 .dp-banner .cero small, .dp-banner .cero b { color:#fff; }
 .dp-usa li { margin:.1rem 0; }
+.st-key-papel { position:relative; background-color:#FFFDF4; border-radius:6px; padding:1.1rem 1.2rem 1.2rem 3.4rem !important;
+  background-image:repeating-linear-gradient(to bottom, transparent 0 38px, #CBDDEB 38px 39px);
+  background-position:0 54px; box-shadow:0 1px 0 #E9E2CF, 0 8px 18px rgba(80,50,20,.12); transform:rotate(-.4deg);
+  border-top:10px solid #F1E9D2; gap:0 !important; }
+.st-key-papel::before { content:""; position:absolute; top:0; bottom:0; left:2.4rem; width:2px; background:#F3A2A2; }
+.st-key-papel::after { content:""; position:absolute; top:-10px; left:0; right:0; height:10px;
+  background:radial-gradient(circle at 8px -2px, transparent 6px, #F1E9D2 6.5px) repeat-x; background-size:16px 10px; }
+.papel-titulo { font-family:'Patrick Hand', 'Comic Sans MS', cursive; font-size:1.7rem; color:#C0392B; line-height:38px;
+  margin:0 0 2px; }
+.st-key-papel [data-testid="stVerticalBlock"], .st-key-papel [data-testid="stHorizontalBlock"] { gap:0 !important; }
+.st-key-papel [data-testid="stElementContainer"] { margin:0 !important; }
+.st-key-papel [data-testid="stCheckbox"] { height:39px; min-height:39px; display:flex; align-items:flex-end; padding-bottom:3px; }
+.st-key-papel [data-testid="stCheckbox"] label p { font-family:'Patrick Hand', 'Comic Sans MS', cursive; font-size:1.3rem;
+  color:#23396B; line-height:1; }
+.st-key-papel [data-testid="stCheckbox"] label:has(input:checked) p { color:#0E9C98; }
+.st-key-papel [data-testid="stTextInput"] label p { font-family:'Patrick Hand', cursive; font-size:1.3rem; color:#C0392B; }
+.st-key-papel [data-testid="stTextInput"] input { font-family:'Patrick Hand', cursive; font-size:1.25rem; color:#23396B;
+  background:transparent; border:none; border-bottom:2px dashed #CBDDEB; border-radius:0; }
+.st-key-papel [data-testid="stTextInput"] [data-baseweb="input"],
+.st-key-papel [data-testid="stTextInput"] [data-baseweb="base-input"] { background:transparent !important; border:none !important; box-shadow:none !important; }
+.st-key-papel [data-testid="stTextInput"] { margin-top:.4rem; }
+@media (max-width: 640px) {
+  .st-key-papel { padding-left:2.6rem !important; }
+  .st-key-papel::before { left:1.8rem; }
+  .st-key-papel [data-testid="stHorizontalBlock"] { flex-wrap:wrap !important; flex-direction:row !important; }
+  .st-key-papel [data-testid="stColumn"] { width:50% !important; flex:0 0 50% !important; min-width:0 !important; }
+  .st-key-papel [data-testid="stCheckbox"] label p { font-size:1.15rem; }
+}
 </style>"""
 
 
@@ -203,10 +233,13 @@ def formulario():
     d.titulo("Cocina con lo que ya tienes", "¿Hay algo en la refri?",
              "Marca lo que tienes y te damos recetas para hoy <b>sin comprar nada</b>. Gasto: $0.")
     with st.container(border=True, key="tarjeta"):
-        st.markdown('<p class="sz-seccion">Lo que tienes en casa</p>', unsafe_allow_html=True)
-        st.pills("Lo que tienes", c.COMUNES, selection_mode="multi", key="comunes", label_visibility="collapsed")
-        st.text_input("¿Algo más?", key="extra_txt",
-                      placeholder="Escríbelo separado por comas: media col, 2 salchichas, mote, sobrante de arroz…")
+        with st.container(key="papel"):                 # la lista de papel, como la de ir al súper
+            st.markdown('<div class="papel-titulo">Lo que hay en la refri</div>', unsafe_allow_html=True)
+            cols = st.columns(4, gap="small")
+            for i, x in enumerate(c.COMUNES):
+                cols[i % 4].checkbox(x, key=f"ing_{i}")
+            st.text_input("¿Algo más?", key="extra_txt",
+                          placeholder="escribe aquí: media col, 2 salchichas, mote, sobrante de arroz…")
         with st.expander("Básicos de cocina que tienes (sal, aceite, especias…)"):
             st.pills("Básicos", c.BASICOS, selection_mode="multi", default=c.BASICOS, key="basicos",
                      label_visibility="collapsed")

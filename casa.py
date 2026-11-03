@@ -1,0 +1,159 @@
+"""Lógica de larefri. (sin interfaz): recetas con lo que ya tienes en casa, sin gastar nada.
+
+Usa el núcleo de sazona. (Gemini, precios, alérgenos, dietas) y agrega:
+  - el pedido a la IA: SOLO tus ingredientes + lo básico de despensa;
+  - una revisión propia: si una receta trae algo que no tienes, se marca como "te falta" o se descarta.
+"""
+
+from __future__ import annotations
+
+import re
+
+from pydantic import BaseModel, Field
+
+import nucleo as n
+
+# Lo que se asume que hay en cualquier cocina (no cuenta como compra)
+BASICOS = ["Sal", "Pimienta", "Aceite", "Agua", "Ajo en polvo", "Comino", "Orégano", "Achiote", "Azúcar",
+           "Vinagre", "Paprika", "Laurel", "Canela", "Caldo en cubo"]
+BASICOS_FIJOS = ["Sal", "Agua"]          # siempre se asumen
+
+# Botones rápidos: lo que más suele haber en una casa en Ecuador
+COMUNES = ["Arroz", "Huevos", "Papa", "Verde", "Maduro", "Yuca", "Fideo", "Atún", "Pollo", "Carne molida",
+           "Lenteja", "Fréjol", "Choclo", "Queso", "Leche", "Tomate", "Pimiento", "Zanahoria", "Cebolla",
+           "Ajo", "Limón", "Aguacate", "Pan", "Avena", "Plátano", "Sardina", "Salchicha", "Arveja"]
+
+POR_BUSQUEDA = 6
+
+
+class IngredienteCasa(n.Ingrediente):
+    de_tu_casa: bool = Field(description="True si el usuario lo tiene (está en su lista o es básico de despensa)")
+
+
+class RecetaCasa(n.Receta):
+    ingredientes: list[IngredienteCasa]
+
+
+class CatalogoCasa(BaseModel):
+    recetas: list[RecetaCasa]
+
+
+PROMPT_CASA = """El usuario NO quiere gastar dinero hoy. Propón {n} recetas distintas que pueda cocinar
+SOLO con lo que tiene en casa.
+
+LO QUE TIENE EN CASA: {tiene}
+BÁSICOS DE DESPENSA (puedes usarlos sin que cuenten como compra): {basicos}
+- Personas (porciones): {personas}
+- Tiempo máximo: {tiempo} minutos
+{dieta}{categoria}
+REGLAS
+1. PROHIBIDO usar ingredientes que no estén en su lista ni en los básicos. {faltante}
+2. No hace falta usar todo: elige combinaciones que queden ricas. Pueden ser recetas de cualquier país,
+   adaptadas a lo que hay.
+3. Marca de_tu_casa = true en cada ingrediente que el usuario tiene o que es básico.
+4. Cantidades realistas para {personas} personas. Si algo no alcanza (p. ej. 2 huevos para 4), ajusta la
+   receta o las porciones en vez de inventar más.
+5. Para cada ingrediente da también la presentación en que se vende en Ecuador y su precio estimado
+   (solo para mostrarle cuánto está AHORRANDO al no comprar), y fraccion_usada.
+6. Marca sal, pimienta, aceite y especias como basico_de_despensa.
+7. Saludables: con verduras o legumbres si las hay, sin frituras profundas.
+8. Pasos cortos (máximo 8), para alguien que cocina poco. Calorías y proteína aproximadas."""
+
+SIN_FALTANTES = "Ningún ingrediente nuevo: la receta tiene que salir con lo que hay."
+UN_FALTANTE = ("Excepción: hasta la MITAD de las recetas pueden tener UN solo ingrediente que no tiene, "
+               "barato y fácil de conseguir; márcalo de_tu_casa = false.")
+
+
+# ---------------------------------------------------------------------------
+# Revisar qué ingredientes tiene de verdad el usuario
+# ---------------------------------------------------------------------------
+
+def _raiz(w: str) -> str:
+    """'tomates', 'tomate' -> 'tomat'; 'huevos' -> 'huev' (plural y vocal final no importan)."""
+    w = n._clave(w)
+    if len(w) > 4 and w.endswith("es"):
+        w = w[:-2]
+    elif len(w) > 3 and w.endswith("s"):
+        w = w[:-1]
+    if len(w) > 3 and w[-1] in "aeo":
+        w = w[:-1]
+    return w
+
+
+def _palabras(texto: str) -> set[str]:
+    return {_raiz(w) for w in re.findall(r"[a-záéíóúñü]+", n._clave(texto)) if len(w) > 2} - {"del", "con", "las", "los", "para"}
+
+
+def separar_lista(texto: str) -> list[str]:
+    """'arroz, 3 huevos y media cebolla' -> ['arroz', '3 huevos', 'media cebolla']"""
+    partes = re.split(r"[,\n;]+|\s+y\s+", texto or "")
+    return [p.strip() for p in partes if p.strip()]
+
+
+def lo_tiene(nombre_ingrediente: str, tiene: list[str]) -> bool:
+    """¿El ingrediente de la receta está en lo que escribió el usuario (o en los básicos)?"""
+    palabras = _palabras(nombre_ingrediente)
+    if not palabras:
+        return True
+    for t in list(tiene) + BASICOS_FIJOS:
+        pt = _palabras(t)
+        if pt and (pt & palabras):
+            return True
+    return False
+
+
+def faltantes(r: RecetaCasa, tiene: list[str]) -> list[str]:
+    return [i.nombre for i in r.ingredientes if not i.basico_de_despensa and not lo_tiene(i.nombre, tiene)]
+
+
+def revisar(r: RecetaCasa, tiene: list[str]) -> RecetaCasa:
+    """No confiamos solo en la IA: marcamos nosotros qué tiene y qué no."""
+    for i in r.ingredientes:
+        i.de_tu_casa = i.basico_de_despensa or lo_tiene(i.nombre, tiene)
+    return r
+
+
+def costo_faltantes(r: RecetaCasa) -> float:
+    """Lo que tendría que gastar (paquetes enteros de lo que le falta)."""
+    import math
+    return round(sum(max(1, math.ceil(round(i.fraccion_usada, 3) - 1e-9)) * i.precio_presentacion_usd
+                     for i in r.ingredientes if not i.de_tu_casa), 2)
+
+
+def ahorro(r: RecetaCasa) -> float:
+    """Cuánto costaría comprar lo que usa de su casa (lo que se ahorra)."""
+    return round(sum(n.costo_ingrediente(i) for i in r.ingredientes if i.de_tu_casa and not i.basico_de_despensa), 2)
+
+
+def buscar_con_lo_que_hay(cliente, tiene: list[str], personas: int, tiempo: int, dieta: str = "Todas",
+                          categoria: str = "", permitir_faltante: bool = False, excluir=(), cantidad=POR_BUSQUEDA,
+                          basicos=None):
+    """Devuelve (recetas_sin_gastar, recetas_con_un_faltante). 'basicos' = lo de despensa que sí tiene."""
+    basicos = list(BASICOS if basicos is None else basicos)
+    if not tiene:
+        raise n.ErrorIA("Escribe o elige al menos un ingrediente que tengas en casa.")
+    prompt = PROMPT_CASA.format(
+        n=cantidad, tiene=", ".join(tiene), basicos=", ".join(sorted(set(basicos + BASICOS_FIJOS))), personas=personas, tiempo=tiempo,
+        dieta=(f"- Dieta OBLIGATORIA: {n.DIETAS[dieta]}.\n") if n.DIETAS.get(dieta) else "",
+        categoria=(f"- Tipo de plato: {categoria}.\n") if categoria else "",
+        faltante=UN_FALTANTE if permitir_faltante else SIN_FALTANTES,
+    )
+    if excluir:
+        prompt += "\nNo repitas estas recetas: " + ", ".join(excluir)
+    cat, _ = n.llamar_gemini(cliente, prompt, CatalogoCasa, razonamiento="minimal")
+    todo = list(tiene) + basicos
+    cero, uno = [], []
+    for r in cat.recetas:
+        r = n.limpiar_receta(r)
+        if not r.ingredientes or not r.pasos or not n.cumple_dieta(r, dieta):
+            continue
+        r = revisar(r, todo)
+        falta = faltantes(r, todo)
+        if not falta:
+            cero.append(r)
+        elif permitir_faltante and len(falta) == 1:
+            uno.append(r)
+    if not cero and not uno:
+        raise n.ErrorIA("Con esos ingredientes no salió ninguna receta sin comprar nada. "
+                        "Agrega uno o dos ingredientes más que tengas, o activa «recetas a las que les falta uno».")
+    return cero, sorted(uno, key=costo_faltantes)

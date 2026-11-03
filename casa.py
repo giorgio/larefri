@@ -50,7 +50,8 @@ REGLAS
 1. PROHIBIDO usar ingredientes que no estén en su lista ni en los básicos. {faltante}
 2. SOLO PLATOS QUE EXISTEN DE VERDAD y que la gente reconoce por su nombre (de Ecuador u otro país):
    p. ej. tortilla de papa, arroz con huevo frito, menestra de lenteja, sopa de fideo, sanduche de queso,
-   huevos revueltos con tomate. PROHIBIDO inventar platos o nombres creativos. No hace falta usar todo:
+   huevos revueltos con tomate. PROHIBIDO inventar platos o nombres creativos o con adjetivos
+   ("express", "saludable", "delicia", "bowl", "fusión"). No hace falta usar todo:
    elige solo los ingredientes que ese plato lleva. Si con lo que hay no sale un plato conocido, propón menos
    recetas (aunque sea una o dos) en vez de inventar.
 3. Marca de_tu_casa = true en cada ingrediente que el usuario tiene o que es básico.
@@ -148,7 +149,8 @@ def buscar_con_lo_que_hay(cliente, tiene: list[str], personas: int, tiempo: int,
     cero, uno = [], []
     for r in cat.recetas:
         r = n.limpiar_receta(r)
-        if not r.ingredientes or not r.pasos or not n.cumple_dieta(r, dieta) or not r.plato_conocido:
+        if not r.ingredientes or not r.pasos or not n.cumple_dieta(r, dieta) or not r.plato_conocido \
+                or n.nombre_inventado(r.nombre):
             continue
         r = revisar(r, todo)
         falta = faltantes(r, todo)

@@ -185,10 +185,10 @@ div:has(> .st-key-papel)::before { content:""; position:absolute; top:2px; left:
 .st-key-papel { animation:dp-caer .9s cubic-bezier(.2,.8,.3,1.2) both; }
 div:has(> .st-key-papel)::before { animation:dp-clac 1.1s ease-out both; }
 @keyframes dp-salto { 0% { transform:translateY(0) scale(1); } 40% { transform:translateY(-7px) scale(1.12); } 100% { transform:translateY(0) scale(1); } }
-@keyframes dp-trazo { from { background-size:0% 7px; } to { background-size:100% 7px; } }
+@keyframes dp-trazo { from { background-size:0% 2.5px; } to { background-size:100% 2.5px; } }
 .st-key-papel [data-testid="stCheckbox"] label:has(input:checked) p { display:inline-block; animation:dp-salto .35s ease-out;
-  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 12' preserveAspectRatio='none'%3E%3Cpath d='M2 8 Q25 3 50 7 T98 5' fill='none' stroke='%230E9C98' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E")
-  left bottom / 100% 7px no-repeat; padding-bottom:6px; animation:dp-salto .35s ease-out, dp-trazo .45s ease-out .1s both; }
+  background:linear-gradient(#0E9C98, #0E9C98) left bottom / 100% 2.5px no-repeat; padding-bottom:5px;
+  animation:dp-salto .3s ease-out, dp-trazo .16s ease-in .05s both; }
 .dp-espera { display:flex; flex-direction:column; align-items:center; gap:.6rem; padding:2rem 0; }
 .dp-espera p { font-family:'Caveat', cursive; font-size:1.6rem; color:#E2571A; margin:0; }
 @keyframes dp-abrir { 0%, 15% { transform:scaleX(1); } 45%, 60% { transform:scaleX(-.25); } 90%, 100% { transform:scaleX(1); } }

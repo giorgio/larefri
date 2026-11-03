@@ -14,6 +14,7 @@ import html
 import os
 import time
 
+import requests
 import streamlit as st
 
 import casa as c
@@ -58,12 +59,27 @@ def esperar_turno():
 
 
 @st.cache_data(ttl=7 * 86400, show_spinner=False, max_entries=500)
-def foto(consulta: str, version: int = 3):
-    return fotos.buscar_foto(consulta, secreto("PEXELS_API_KEY"), secreto("UNSPLASH_ACCESS_KEY"))
+def foto(consulta: str, plato: str = "", version: int = 5):
+    """Busca la foto y, si hay clave de IA, la IA mira cada candidata y solo acepta la que es ese plato.
+    Si la revisión falla (cuota de la IA), se lanza error para NO guardar 'sin foto' y reintentar luego."""
+    verificar = None
+    if secreto("GEMINI_API_KEY"):
+        cliente = cliente_gemini()
+
+        def verificar(url):
+            try:
+                img = requests.get(url, timeout=5).content
+            except requests.RequestException:
+                return False
+            return n.foto_coincide(cliente, img, plato or consulta, consulta)
+    return fotos.buscar_foto(consulta, secreto("PEXELS_API_KEY"), secreto("UNSPLASH_ACCESS_KEY"), verificar)
 
 
 def mostrar_foto(r):
-    f = foto(r.busqueda_foto)
+    try:
+        f = foto(r.busqueda_foto, r.nombre)
+    except Exception:  # noqa: BLE001  (la IA no pudo revisar la foto ahora: sin foto por esta vez)
+        f = None
     if f:
         st.image(f["url"], width="stretch")
         d.credito_foto(f)

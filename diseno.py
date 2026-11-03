@@ -26,13 +26,14 @@ TONOS = [("#5E6B3A", "#FFFFFF"),   # oliva
          ("#3E5A7A", "#FFFFFF"),   # azul tierra
          ("#D9956A", TEXTO)]       # arcilla
 
-# Isotipo de sazona.: la S baja y se convierte en un plato hondo servido.
-ISOTIPO = ("M29.6 9.6 C29.6 6.1 26.8 3.6 23.3 3.6 C19.7 3.6 16.9 6.2 16.9 9.5 C16.9 13 19.6 16.6 23.4 16.6 "
-           "L41.5 16.6 A17.5 15.5 0 0 1 6.5 16.6 L13.5 16.6 M18.5 37.2 H29.5")
+# Isotipo de larefri.: una refri con una hojita arriba (comida fresca, aprovechada).
+ISOTIPO = ("M18 12 H30 Q35 12 35 17 V37 Q35 42 30 42 H18 Q13 42 13 37 V17 Q13 12 18 12 Z "
+           "M13 23 H35 M18 16 V19 M18 27 V33 "
+           "M24 12 C24 7 28 4 33 4 C33 9 29 12 24 12 Z")
 
 
 def isotipo_svg(color: str = "#fff", tam: int = 28) -> str:
-    return (f'<svg width="{tam}" height="{tam}" viewBox="0 0 48 48" fill="none" stroke="{color}" stroke-width="3.6" '
+    return (f'<svg width="{tam}" height="{tam}" viewBox="0 0 48 48" fill="none" stroke="{color}" stroke-width="3.2" '
             f'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{ISOTIPO}"/></svg>')
 
 

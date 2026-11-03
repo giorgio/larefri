@@ -48,8 +48,11 @@ BÁSICOS DE DESPENSA (puedes usarlos sin que cuenten como compra): {basicos}
 {dieta}{categoria}
 REGLAS
 1. PROHIBIDO usar ingredientes que no estén en su lista ni en los básicos. {faltante}
-2. No hace falta usar todo: elige combinaciones que queden ricas. Pueden ser recetas de cualquier país,
-   adaptadas a lo que hay.
+2. SOLO PLATOS QUE EXISTEN DE VERDAD y que la gente reconoce por su nombre (de Ecuador u otro país):
+   p. ej. tortilla de papa, arroz con huevo frito, menestra de lenteja, sopa de fideo, sanduche de queso,
+   huevos revueltos con tomate. PROHIBIDO inventar platos o nombres creativos. No hace falta usar todo:
+   elige solo los ingredientes que ese plato lleva. Si con lo que hay no sale un plato conocido, propón menos
+   recetas (aunque sea una o dos) en vez de inventar.
 3. Marca de_tu_casa = true en cada ingrediente que el usuario tiene o que es básico.
 4. Cantidades realistas para {personas} personas. Si algo no alcanza (p. ej. 2 huevos para 4), ajusta la
    receta o las porciones en vez de inventar más.
@@ -145,7 +148,7 @@ def buscar_con_lo_que_hay(cliente, tiene: list[str], personas: int, tiempo: int,
     cero, uno = [], []
     for r in cat.recetas:
         r = n.limpiar_receta(r)
-        if not r.ingredientes or not r.pasos or not n.cumple_dieta(r, dieta):
+        if not r.ingredientes or not r.pasos or not n.cumple_dieta(r, dieta) or not r.plato_conocido:
             continue
         r = revisar(r, todo)
         falta = faltantes(r, todo)

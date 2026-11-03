@@ -23,6 +23,25 @@ COMUNES = ["Arroz", "Huevos", "Papa", "Verde", "Maduro", "Yuca", "Fideo", "Atún
            "Lenteja", "Fréjol", "Choclo", "Queso", "Leche", "Tomate", "Pimiento", "Zanahoria", "Cebolla",
            "Ajo", "Limón", "Aguacate", "Pan", "Avena", "Plátano", "Sardina", "Salchicha", "Arveja"]
 
+# Para el buscador "¿Algo más?": se completan solas al escribir (nombres como se dicen en Ecuador)
+TODOS = sorted(set(COMUNES + [
+    "Mote", "Col", "Coliflor", "Brócoli", "Lechuga", "Pepino", "Rábano", "Remolacha", "Vainitas", "Zapallo",
+    "Zucchini", "Berenjena", "Espinaca", "Acelga", "Apio", "Culantro", "Perejil", "Cebolla paiteña", "Cebolla blanca",
+    "Cebolla larga", "Pimiento rojo", "Pimiento verde", "Ají", "Tomate de árbol", "Tomate riñón", "Papa chola",
+    "Camote", "Melloco", "Habas", "Garbanzo", "Chocho", "Quinua", "Maní", "Canguil", "Harina", "Harina de maíz",
+    "Maicena", "Fideo cabello de ángel", "Tallarín", "Spaghetti", "Macarrones", "Arroz integral", "Pan de molde",
+    "Tortillas", "Galletas", "Plátano verde", "Guineo", "Manzana", "Pera", "Naranja", "Mandarina", "Piña", "Papaya",
+    "Sandía", "Melón", "Mora", "Frutilla", "Maracuyá", "Naranjilla", "Coco", "Uvas", "Mango", "Durazno",
+    "Pollo entero", "Pechuga de pollo", "Alas de pollo", "Muslos de pollo", "Carne de res", "Carne de cerdo",
+    "Chuleta", "Costilla", "Hígado", "Chorizo", "Mortadela", "Jamón", "Tocino", "Pescado", "Tilapia", "Corvina",
+    "Camarón", "Concha", "Calamar", "Atún en lata", "Sardina en lata", "Huevo", "Queso fresco", "Queso mozzarella",
+    "Quesillo", "Yogur", "Crema de leche", "Mantequilla", "Margarina", "Leche en polvo", "Leche de coco",
+    "Salsa de tomate", "Mayonesa", "Mostaza", "Salsa china", "Pasta de tomate", "Achiote", "Comino", "Orégano",
+    "Panela", "Azúcar", "Miel", "Avena", "Granola", "Cacao", "Café", "Chocolate", "Pasas", "Nueces", "Almendras",
+    "Tofu", "Soya", "Lenteja", "Fréjol rojo", "Fréjol negro", "Arveja tierna", "Choclo desgranado", "Sobrante de arroz",
+    "Pollo sobrante", "Carne sobrante", "Pan duro", "Papas cocinadas",
+]))
+
 POR_BUSQUEDA = 6
 
 

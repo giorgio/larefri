@@ -59,7 +59,7 @@ def esperar_turno():
 
 
 @st.cache_data(ttl=7 * 86400, show_spinner=False, max_entries=500)
-def foto(consulta: str, plato: str = "", version: int = 5):
+def foto(consulta: str, plato: str = "", version: int = 6):
     """Busca la foto y, si hay clave de IA, la IA mira cada candidata y solo acepta la que es ese plato.
     Si la revisión falla (cuota de la IA), se lanza error para NO guardar 'sin foto' y reintentar luego."""
     verificar = None
@@ -94,7 +94,7 @@ def ir(_pagina="inicio", *_):
 
 def lo_que_tiene() -> list[str]:
     s = st.session_state
-    extra = c.separar_lista(s.get("extra_txt", ""))
+    extra = list(s.get("extra_sel") or [])
     vistos, out = set(), []
     marcados = [x for i, x in enumerate(c.COMUNES) if s.get(f"ing_{i}")]
     for x in marcados + extra:
@@ -173,6 +173,16 @@ div:has(> .st-key-papel)::before { content:""; position:absolute; top:2px; left:
 .st-key-papel [data-testid="stTextInput"] [data-baseweb="input"],
 .st-key-papel [data-testid="stTextInput"] [data-baseweb="base-input"] { background:transparent !important; border:none !important; box-shadow:none !important; }
 .st-key-papel [data-testid="stTextInput"] { margin-top:.4rem; }
+.st-key-papel [data-testid="stMultiSelect"] { margin-top:.4rem; }
+.st-key-papel [data-testid="stMultiSelect"] label p { font-family:'Caveat', cursive !important; font-weight:700;
+  font-size:1.6rem !important; color:#E2571A !important; }
+.st-key-papel [data-testid="stMultiSelect"] input { font-family:'Caveat', cursive !important; font-size:1.45rem !important;
+  color:#23396B !important; }
+.st-key-papel [data-testid="stMultiSelect"] [role="group"], .st-key-papel [data-testid="stMultiSelect"] [data-baseweb="select"] > div {
+  background:transparent !important; border:none !important; border-bottom:2px dashed #D5E2EC !important;
+  border-radius:0 !important; box-shadow:none !important; }
+.st-key-papel [data-testid="stMultiSelect"] [data-testid="stMultiSelectChip"], .st-key-papel [data-testid="stMultiSelect"] span[data-baseweb="tag"] {
+  background:#E4F6F5 !important; color:#0E9C98 !important; font-family:'Caveat', cursive !important; font-size:1.3rem !important; }
 /* Letra a mano solo en el título y en las notitas; el resto queda en letra normal */
 .sz-titulo { font-family:'Caveat', 'Segoe Print', cursive !important; font-weight:700 !important; color:#E2571A !important;
   font-size:clamp(3rem, 6.5vw, 4.6rem) !important; letter-spacing:0 !important; transform:rotate(-1.5deg); display:inline-block; }
@@ -339,8 +349,9 @@ def formulario():
             cols = st.columns(4, gap="small")
             for i, x in enumerate(c.COMUNES):
                 cols[i % 4].checkbox(x, key=f"ing_{i}")
-            st.text_input("¿Algo más?", key="extra_txt",
-                          placeholder="escribe aquí: media col, 2 salchichas, mote, sobrante de arroz…")
+            st.multiselect("¿Algo más?", [x for x in c.TODOS if x not in c.COMUNES], key="extra_sel",
+                           accept_new_options=True, placeholder="escribe y elige: mote, col, chorizo, sobrante de arroz…",
+                           help="Empieza a escribir y elige de la lista. Si no está, escríbelo completo y presiona Enter.")
         with st.expander("Básicos de cocina que tienes (sal, aceite, especias…)"):
             st.pills("Básicos", c.BASICOS, selection_mode="multi", default=c.BASICOS, key="basicos",
                      label_visibility="collapsed")

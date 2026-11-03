@@ -46,7 +46,7 @@ def cliente_gemini():
     from google import genai
     clave = secreto("GEMINI_API_KEY")
     if not clave:
-        raise n.ErrorIA("Falta la clave de la IA (GEMINI_API_KEY) en los Secrets de la app.")
+        raise n.ErrorIA("Falta la clave de la IA (GEMINI_API_KEY): agrégala en Variables de Railway y vuelve a desplegar.")
     return genai.Client(api_key=clave)
 
 
@@ -177,6 +177,20 @@ div:has(> .st-key-papel)::before { content:""; position:absolute; top:2px; left:
 .st-key-notas input, .st-key-notas div[data-baseweb="select"] div { font-family:'Caveat', 'Segoe Print', cursive !important;
   color:#23396B !important; font-size:1.45rem !important; background:transparent !important; }
 .st-key-notas [data-testid="stNumberInputContainer"] button { background:transparent !important; }
+.st-key-notas [data-testid="stSelectbox"] [role="group"] { background:#FFE9D6 !important; border:none !important;
+  border-radius:8px !important; box-shadow:none !important; }
+.st-key-notas [data-testid="stSelectbox"] input[role="combobox"] { font-family:'Caveat', 'Segoe Print', cursive !important;
+  font-size:1.45rem !important; color:#23396B !important; background:transparent !important; }
+.st-key-notas [data-testid="stSelectbox"] button svg { color:#23396B; }
+/* el menú que se despliega: mismo rosado, misma letra y tinta azul */
+[data-testid="stSelectboxVirtualDropdown"], [data-testid="stSelectboxVirtualDropdown"] [role="listbox"] {
+  background:#FFE9D6 !important; border-radius:10px !important; }
+[data-testid="stSelectboxVirtualDropdown"] [role="option"], [data-testid="stSelectboxVirtualDropdown"] [role="option"] * {
+  font-family:'Caveat', 'Segoe Print', cursive !important; font-size:1.45rem !important; color:#23396B !important; }
+[data-testid="stSelectboxVirtualDropdown"] [role="option"] { background:transparent !important; }
+[data-testid="stSelectboxVirtualDropdown"] [role="option"][data-hovered="true"],
+[data-testid="stSelectboxVirtualDropdown"] [role="option"][data-focused="true"],
+[data-testid="stSelectboxVirtualDropdown"] [role="option"][aria-selected="true"] { background:#FFD3B0 !important; }
 /* ---------- Movimiento ---------- */
 @keyframes dp-caer { 0% { opacity:0; transform:translateY(-90px) rotate(-9deg); }
   60% { opacity:1; transform:translateY(8px) rotate(-1deg); } 80% { transform:translateY(-3px) rotate(-2.6deg); }
@@ -280,7 +294,7 @@ def cuadricula(recetas, prefijo: str, cero: bool):
 def buscar(mas=False):
     s = st.session_state
     tiene = lo_que_tiene()
-    pedido = dict(tiene=tiene, personas=s["personas_in"], tiempo=s["tiempo_in"], dieta=s["dieta_in"],
+    pedido = dict(tiene=tiene, personas=s["personas_in"], tiempo=s["tiempo_in"], dieta=s.get("dieta_in", "Todas"),
                   categoria="" if s["tipo_in"] == "Cualquiera" else s["tipo_in"], permitir=s["falta_in"],
                   basicos=list(s.get("basicos") or []))
     esperar_turno()
@@ -316,10 +330,9 @@ def formulario():
                      label_visibility="collapsed")
             st.caption("La sal y el agua siempre se asumen.")
         with st.container(key="notas"):
-            a, b, e, f = st.columns(4, gap="medium")
+            a, b, f = st.columns(3, gap="medium")
             a.number_input("Personas", 1, 12, 2, key="personas_in")
             b.selectbox("Tiempo", [15, 30, 45, 60], index=1, key="tiempo_in", format_func=lambda m: f"{m} min o menos")
-            e.selectbox("Alimentación", list(n.DIETAS), key="dieta_in")
             f.selectbox("Tipo de plato", ["Cualquiera"] + n.CATEGORIAS, key="tipo_in")
         st.toggle("Mostrar también recetas a las que les falta 1 ingrediente barato", value=False, key="falta_in",
                   help="Apagado: solo recetas en las que no compras nada.")

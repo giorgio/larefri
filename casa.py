@@ -42,6 +42,23 @@ TODOS = sorted(set(COMUNES + [
     "Pollo sobrante", "Carne sobrante", "Pan duro", "Papas cocinadas",
 ]))
 
+def _sin_variantes(lista):
+    """Quita variantes de lo que ya está en la lista de papel ('Arroz integral', 'Sobrante de arroz'...)."""
+    distintos = {"Tomate de árbol", "Leche de coco"}          # se llaman parecido pero son otra cosa
+    base = {_raiz(n._clave(x).split()[0]) for x in COMUNES}
+    out = []
+    for x in lista:
+        k = n._clave(x)
+        if x in COMUNES or x in distintos:
+            out.append(x)
+        elif "sobrante" in k or any(_raiz(w) in base for w in k.split()):
+            continue
+        else:
+            out.append(x)
+    return sorted(set(out))
+
+
+
 POR_BUSQUEDA = 6
 
 
@@ -181,3 +198,6 @@ def buscar_con_lo_que_hay(cliente, tiene: list[str], personas: int, tiempo: int,
         raise n.ErrorIA("Con esos ingredientes no salió ninguna receta sin comprar nada. "
                         "Agrega uno o dos ingredientes más que tengas y vuelve a buscar.")
     return cero, sorted(uno, key=costo_faltantes)
+
+
+SUGERENCIAS = _sin_variantes(TODOS)      # lo que se ofrece en "¿Algo más?" (sin repetir el arroz, el tomate...)

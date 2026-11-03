@@ -94,7 +94,7 @@ def ir(_pagina="inicio", *_):
 
 def lo_que_tiene() -> list[str]:
     s = st.session_state
-    extra = list(s.get("extra_sel") or [])
+    extra = [y for x in (s.get("extra_sel") or []) for y in c.separar_lista(x)]   # "mote, col" -> 2 ingredientes
     vistos, out = set(), []
     marcados = [x for i, x in enumerate(c.COMUNES) if s.get(f"ing_{i}")]
     for x in marcados + extra:
@@ -181,8 +181,22 @@ div:has(> .st-key-papel)::before { content:""; position:absolute; top:2px; left:
 .st-key-papel [data-testid="stMultiSelect"] [role="group"], .st-key-papel [data-testid="stMultiSelect"] [data-baseweb="select"] > div {
   background:transparent !important; border:none !important; border-bottom:2px dashed #D5E2EC !important;
   border-radius:0 !important; box-shadow:none !important; }
-.st-key-papel [data-testid="stMultiSelect"] [data-testid="stMultiSelectChip"], .st-key-papel [data-testid="stMultiSelect"] span[data-baseweb="tag"] {
-  background:#E4F6F5 !important; color:#0E9C98 !important; font-family:'Caveat', cursive !important; font-size:1.3rem !important; }
+/* cada ingrediente extra en su cuadradito con ✕ */
+.st-key-papel [data-testid="stMultiSelect"] [data-tag] { display:inline-flex !important; align-items:center; gap:.35rem;
+  background:#E4F6F5 !important; border:1.5px solid #0E9C98 !important; border-radius:8px !important;
+  padding:.05rem .45rem .05rem .6rem !important; margin:.15rem .3rem .15rem 0 !important; }
+.st-key-papel [data-testid="stMultiSelect"] [data-tag] > span { font-family:'Caveat', cursive !important; font-size:1.35rem !important;
+  color:#0B6F6C !important; line-height:1.2; }
+.st-key-papel [data-testid="stMultiSelect"] [data-tag] button { color:#0B6F6C !important; background:transparent !important; }
+.st-key-papel [data-testid="stMultiSelect"] [data-tag] button svg { width:.7em !important; height:.7em !important; }
+/* el menú de sugerencias: misma letra a mano, tinta azul y fondo rosado */
+[data-testid="stMultiSelectDropdown"], [data-testid="stMultiSelectDropdown"] [role="listbox"] { background:#FFE9D6 !important;
+  border-radius:10px !important; }
+[data-testid="stMultiSelectDropdown"] [role="option"], [data-testid="stMultiSelectDropdown"] [role="option"] * {
+  font-family:'Caveat', 'Segoe Print', cursive !important; font-size:1.45rem !important; color:#23396B !important; }
+[data-testid="stMultiSelectDropdown"] [role="option"] { background:transparent !important; }
+[data-testid="stMultiSelectDropdown"] [role="option"][data-hovered="true"],
+[data-testid="stMultiSelectDropdown"] [role="option"][data-focused="true"] { background:#FFD3B0 !important; }
 /* Letra a mano solo en el título y en las notitas; el resto queda en letra normal */
 .sz-titulo { font-family:'Caveat', 'Segoe Print', cursive !important; font-weight:700 !important; color:#E2571A !important;
   font-size:clamp(3rem, 6.5vw, 4.6rem) !important; letter-spacing:0 !important; transform:rotate(-1.5deg); display:inline-block; }
@@ -349,7 +363,7 @@ def formulario():
             cols = st.columns(4, gap="small")
             for i, x in enumerate(c.COMUNES):
                 cols[i % 4].checkbox(x, key=f"ing_{i}")
-            st.multiselect("¿Algo más?", [x for x in c.TODOS if x not in c.COMUNES], key="extra_sel",
+            st.multiselect("¿Algo más?", c.SUGERENCIAS, key="extra_sel",
                            accept_new_options=True, placeholder="escribe y elige: mote, col, chorizo, sobrante de arroz…",
                            help="Empieza a escribir y elige de la lista. Si no está, escríbelo completo y presiona Enter.")
         with st.expander("Básicos de cocina que tienes (sal, aceite, especias…)"):

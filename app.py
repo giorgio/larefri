@@ -59,7 +59,7 @@ def esperar_turno():
 
 @st.cache_data(ttl=7 * 86400, show_spinner=False, max_entries=500)
 def foto(consulta: str):
-    return fotos.buscar_foto(consulta, secreto("PEXELS_API_KEY"))
+    return fotos.buscar_foto(consulta, secreto("PEXELS_API_KEY"), secreto("UNSPLASH_ACCESS_KEY"))
 
 
 def mostrar_foto(r):
@@ -384,4 +384,4 @@ formulario()
 resultados()
 st.divider()
 st.caption("larefri. · hermana de canastas. y sazona. · IA: Google Gemini · Fotos: "
-           "[Wikimedia Commons](https://commons.wikimedia.org) / Pexels · Precios y valores nutricionales aproximados.")
+           "[Unsplash](https://unsplash.com/?utm_source=larefri&utm_medium=referral) / [Wikimedia Commons](https://commons.wikimedia.org) · Precios y valores nutricionales aproximados.")

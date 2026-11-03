@@ -295,7 +295,7 @@ def buscar(mas=False):
     s = st.session_state
     tiene = lo_que_tiene()
     pedido = dict(tiene=tiene, personas=s["personas_in"], tiempo=s["tiempo_in"], dieta=s.get("dieta_in", "Todas"),
-                  categoria="" if s["tipo_in"] == "Cualquiera" else s["tipo_in"], permitir=s["falta_in"],
+                  categoria="" if s["tipo_in"] == "Cualquiera" else s["tipo_in"], permitir=False,
                   basicos=list(s.get("basicos") or []))
     esperar_turno()
     excluir = [r.nombre for r in s["cero"] + s["uno"]] if mas else []
@@ -334,8 +334,6 @@ def formulario():
             a.number_input("Personas", 1, 12, 2, key="personas_in")
             b.selectbox("Tiempo", [15, 30, 45, 60], index=1, key="tiempo_in", format_func=lambda m: f"{m} min o menos")
             f.selectbox("Tipo de plato", ["Cualquiera"] + n.CATEGORIAS, key="tipo_in")
-        st.toggle("Mostrar también recetas a las que les falta 1 ingrediente barato", value=False, key="falta_in",
-                  help="Apagado: solo recetas en las que no compras nada.")
         tiene = lo_que_tiene()
         st.caption(f"Tienes {len(tiene)} ingrediente{'s' if len(tiene) != 1 else ''} marcados"
                    + (f": {', '.join(tiene)}." if tiene else ". Elige al menos uno."))

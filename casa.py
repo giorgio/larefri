@@ -155,5 +155,5 @@ def buscar_con_lo_que_hay(cliente, tiene: list[str], personas: int, tiempo: int,
             uno.append(r)
     if not cero and not uno:
         raise n.ErrorIA("Con esos ingredientes no salió ninguna receta sin comprar nada. "
-                        "Agrega uno o dos ingredientes más que tengas, o activa «recetas a las que les falta uno».")
+                        "Agrega uno o dos ingredientes más que tengas y vuelve a buscar.")
     return cero, sorted(uno, key=costo_faltantes)

@@ -58,7 +58,7 @@ def esperar_turno():
 
 
 @st.cache_data(ttl=7 * 86400, show_spinner=False, max_entries=500)
-def foto(consulta: str):
+def foto(consulta: str, version: int = 2):
     return fotos.buscar_foto(consulta, secreto("PEXELS_API_KEY"), secreto("UNSPLASH_ACCESS_KEY"))
 
 

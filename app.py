@@ -99,6 +99,17 @@ def sello_falta(r) -> str:
     return (f'<div class="dp-falta">🛒 Te falta: <b>{html.escape(falta)}</b> · ~${c.costo_faltantes(r):.2f}</div>')
 
 
+ESPERA_HTML = """<div class="dp-espera">
+<svg width="92" height="92" viewBox="0 0 48 48" aria-hidden="true">
+ <rect width="48" height="48" rx="12" fill="#FF7A1A"/>
+ <g fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M18 12 H30 Q35 12 35 17 V37 Q35 42 30 42 H18 Q13 42 13 37 V17 Q13 12 18 12 Z" opacity=".35"/>
+  <path d="M15.5 27 H32.5 M15.5 33 H32.5" opacity=".35"/>
+  <g class="dp-puerta"><path d="M18 12 H30 Q35 12 35 17 V37 Q35 42 30 42 H18 Q13 42 13 37 V17 Q13 12 18 12 Z M13 23 H35 M18 16 V19 M18 27 V33"/></g>
+  <path class="dp-hoja" d="M24 12 C24 7 28 4 33 4 C33 9 29 12 24 12 Z"/>
+ </g></svg>
+<p>Abriendo la refri y pensando qué cocinar…</p></div>"""
+
 ESTILOS = """<style>
 @import url('https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&display=swap');
 .dp-sello { display:flex; align-items:baseline; gap:.55rem; background:#0E9C98; color:#fff; border-radius:14px;
@@ -117,14 +128,18 @@ ESTILOS = """<style>
 .dp-usa li { margin:.1rem 0; }
 .st-key-papel { position:relative; background:#FFFFFF; border-radius:3px; padding:2.2rem 1.6rem 1.3rem 1.8rem !important;
   background-image:repeating-linear-gradient(to bottom, transparent 0 39px, #E6EEF4 39px 40px); background-position:0 66px;
-  box-shadow:0 2px 4px rgba(0,0,0,.06), 0 14px 28px rgba(80,50,20,.16); transform:rotate(-2.2deg);
+  transform:rotate(-2.2deg);
   margin:1.2rem .6rem .8rem; gap:0 !important; }
-.st-key-papel::before { content:""; position:absolute; top:-20px; left:50%; width:46px; height:46px; margin-left:-23px;
+div:has(> .st-key-papel) { position:relative; filter:drop-shadow(0 2px 2px rgba(0,0,0,.08)) drop-shadow(0 12px 14px rgba(80,50,20,.16)); }
+div:has(> .st-key-papel)::before { content:""; position:absolute; top:2px; left:50%; width:46px; height:46px; margin-left:-23px;
   border-radius:12px; background:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2048%2048%22%3E%3Crect%20width%3D%2248%22%20height%3D%2248%22%20rx%3D%2212%22%20fill%3D%22%23FF7A1A%22/%3E%3Cpath%20d%3D%22M18%2012%20H30%20Q35%2012%2035%2017%20V37%20Q35%2042%2030%2042%20H18%20Q13%2042%2013%2037%20V17%20Q13%2012%2018%2012%20Z%20M13%2023%20H35%20M18%2016%20V19%20M18%2027%20V33%20M24%2012%20C24%207%2028%204%2033%204%20C33%209%2029%2012%2024%2012%20Z%22%20fill%3D%22none%22%20stroke%3D%22%23fff%22%20stroke-width%3D%223.2%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22/%3E%3C/svg%3E") center/100% no-repeat; transform:rotate(7deg);
   box-shadow:0 5px 10px rgba(0,0,0,.28), inset 0 -3px 0 rgba(0,0,0,.12); z-index:3; }
-.st-key-papel::after { content:""; position:absolute; right:-1px; bottom:-1px; width:0; height:0; z-index:2;
-  border-style:solid; border-width:0 0 38px 38px; border-color:transparent transparent #FFFFFF #EDE7DC;
-  filter:drop-shadow(-3px -3px 3px rgba(80,50,20,.18)); }
+/* esquina que se enrolla como un cono: banda de luz y sombra en diagonal */
+.st-key-papel::after { content:""; position:absolute; right:-1px; bottom:-1px; width:92px; height:92px; z-index:2;
+  clip-path:polygon(100% 0, 100% 100%, 0 100%);
+  background:linear-gradient(135deg, rgba(0,0,0,0) 49%, rgba(80,50,20,.22) 50%, #E9E2D6 52%, #FFFFFF 57%, #F3EEE6 61%,
+    #D8CEBD 66%, #C9BDA8 69%, #FFFFFF 70%);
+  border-bottom-right-radius:14px; }
 .papel-titulo { font-family:'Caveat', 'Segoe Print', cursive; font-weight:700; font-size:2.1rem; color:#E2571A; line-height:40px;
   margin:0 0 10px; transform:rotate(-1deg); }
 .st-key-papel [data-testid="stVerticalBlock"], .st-key-papel [data-testid="stHorizontalBlock"] { gap:0 !important; }
@@ -148,6 +163,53 @@ ESTILOS = """<style>
 .st-key-papel [data-testid="stTextInput"] [data-baseweb="input"],
 .st-key-papel [data-testid="stTextInput"] [data-baseweb="base-input"] { background:transparent !important; border:none !important; box-shadow:none !important; }
 .st-key-papel [data-testid="stTextInput"] { margin-top:.4rem; }
+/* Letra a mano solo en el título y en las notitas; el resto queda en letra normal */
+.sz-titulo { font-family:'Caveat', 'Segoe Print', cursive !important; font-weight:700 !important; color:#E2571A !important;
+  font-size:clamp(3rem, 6.5vw, 4.6rem) !important; letter-spacing:0 !important; transform:rotate(-1.5deg); display:inline-block; }
+.sz-ceja { color:#0E9C98 !important; }
+.st-key-notas [data-testid="stColumn"] { background:#fff; padding:1.3rem .9rem .8rem; border-radius:3px; position:relative;
+  box-shadow:0 2px 4px rgba(0,0,0,.06), 0 10px 18px rgba(80,50,20,.14); margin:.8rem .2rem; }
+.st-key-notas [data-testid="stColumn"]::before { content:""; position:absolute; top:-9px; left:50%; width:64px; height:20px;
+  margin-left:-32px; background:rgba(14,156,152,.28); transform:rotate(-4deg); }
+.st-key-notas [data-testid="stColumn"]:nth-child(1) { transform:rotate(-2.4deg); }
+.st-key-notas [data-testid="stColumn"]:nth-child(2) { transform:rotate(1.6deg) translateY(6px); }
+.st-key-notas [data-testid="stColumn"]:nth-child(3) { transform:rotate(-1deg) translateY(-3px); }
+.st-key-notas [data-testid="stColumn"]:nth-child(4) { transform:rotate(2.2deg) translateY(4px); }
+.st-key-notas label p { font-family:'Caveat', 'Segoe Print', cursive !important; color:#E2571A !important; font-weight:700;
+  font-size:1.6rem !important; }
+.st-key-notas div[data-baseweb="select"] > div, .st-key-notas [data-testid="stNumberInputContainer"] {
+  background:transparent !important; border:none !important; border-bottom:2px dashed #D5E2EC !important; border-radius:0 !important;
+  box-shadow:none !important; }
+.st-key-notas input, .st-key-notas div[data-baseweb="select"] div { font-family:'Caveat', 'Segoe Print', cursive !important;
+  color:#23396B !important; font-size:1.45rem !important; background:transparent !important; }
+.st-key-notas [data-testid="stNumberInputContainer"] button { background:transparent !important; }
+/* ---------- Movimiento ---------- */
+@keyframes dp-caer { 0% { opacity:0; transform:translateY(-90px) rotate(-9deg); }
+  60% { opacity:1; transform:translateY(8px) rotate(-1deg); } 80% { transform:translateY(-3px) rotate(-2.6deg); }
+  100% { transform:translateY(0) rotate(-2.2deg); } }
+@keyframes dp-clac { 0%, 55% { transform:rotate(7deg) scale(0); } 75% { transform:rotate(7deg) scale(1.25); } 100% { transform:rotate(7deg) scale(1); } }
+.st-key-papel { animation:dp-caer .9s cubic-bezier(.2,.8,.3,1.2) both; }
+div:has(> .st-key-papel)::before { animation:dp-clac 1.1s ease-out both; }
+@keyframes dp-salto { 0% { transform:translateY(0) scale(1); } 40% { transform:translateY(-7px) scale(1.12); } 100% { transform:translateY(0) scale(1); } }
+@keyframes dp-trazo { from { background-size:0% 7px; } to { background-size:100% 7px; } }
+.st-key-papel [data-testid="stCheckbox"] label:has(input:checked) p { display:inline-block; animation:dp-salto .35s ease-out;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 12' preserveAspectRatio='none'%3E%3Cpath d='M2 8 Q25 3 50 7 T98 5' fill='none' stroke='%230E9C98' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E")
+  left bottom / 100% 7px no-repeat; padding-bottom:6px; animation:dp-salto .35s ease-out, dp-trazo .45s ease-out .1s both; }
+.dp-espera { display:flex; flex-direction:column; align-items:center; gap:.6rem; padding:2rem 0; }
+.dp-espera p { font-family:'Caveat', cursive; font-size:1.6rem; color:#E2571A; margin:0; }
+@keyframes dp-abrir { 0%, 15% { transform:scaleX(1); } 45%, 60% { transform:scaleX(-.25); } 90%, 100% { transform:scaleX(1); } }
+@keyframes dp-hoja { 0%, 100% { transform:rotate(0); } 50% { transform:rotate(-14deg); } }
+.dp-puerta { transform-origin:13px 27px; animation:dp-abrir 1.6s ease-in-out infinite; }
+.dp-hoja { transform-origin:24px 12px; animation:dp-hoja 1.6s ease-in-out infinite; }
+@keyframes dp-subir { from { opacity:0; transform:translateY(28px) scale(.97); } to { opacity:1; transform:none; } }
+[class*="st-key-rc_"] { animation:dp-subir .5s ease-out both; }
+[data-testid="stColumn"]:nth-child(2) [class*="st-key-rc_"] { animation-delay:.12s; }
+[data-testid="stColumn"]:nth-child(3) [class*="st-key-rc_"] { animation-delay:.24s; }
+@keyframes dp-sello { 0% { opacity:0; transform:scale(2.4) rotate(-14deg); } 70% { opacity:1; transform:scale(.94) rotate(1deg); }
+  100% { transform:scale(1) rotate(-1.5deg); } }
+.dp-sello { animation:dp-sello .45s cubic-bezier(.3,1.4,.5,1) .45s both; transform-origin:30% 50%; }
+.dp-banner .cero { animation:dp-sello .5s cubic-bezier(.3,1.4,.5,1) .1s both; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation:none !important; } }
 @media (max-width: 640px) {
   .st-key-papel { padding-left:1.2rem !important; padding-right:1rem !important; transform:rotate(-1.4deg); }
   .st-key-papel [data-testid="stHorizontalBlock"] { flex-wrap:wrap !important; flex-direction:row !important; }
@@ -229,10 +291,14 @@ def buscar(mas=False):
                   basicos=list(s.get("basicos") or []))
     esperar_turno()
     excluir = [r.nombre for r in s["cero"] + s["uno"]] if mas else []
-    with st.spinner("Mirando qué se puede cocinar con lo que tienes…"):
+    espera = st.empty()
+    espera.markdown(ESPERA_HTML, unsafe_allow_html=True)
+    try:
         cero, uno = c.buscar_con_lo_que_hay(
             cliente_gemini(), pedido["tiene"], pedido["personas"], pedido["tiempo"], pedido["dieta"],
             pedido["categoria"], pedido["permitir"], excluir=excluir, basicos=pedido["basicos"])
+    finally:
+        espera.empty()
     if mas:
         s["cero"], s["uno"] = s["cero"] + cero, s["uno"] + uno
     else:
@@ -255,11 +321,12 @@ def formulario():
             st.pills("Básicos", c.BASICOS, selection_mode="multi", default=c.BASICOS, key="basicos",
                      label_visibility="collapsed")
             st.caption("La sal y el agua siempre se asumen.")
-        a, b, e, f = st.columns(4)
-        a.number_input("Personas", 1, 12, 2, key="personas_in")
-        b.selectbox("Tiempo", [15, 30, 45, 60], index=1, key="tiempo_in", format_func=lambda m: f"{m} min o menos")
-        e.selectbox("Alimentación", list(n.DIETAS), key="dieta_in")
-        f.selectbox("Tipo de plato", ["Cualquiera"] + n.CATEGORIAS, key="tipo_in")
+        with st.container(key="notas"):
+            a, b, e, f = st.columns(4, gap="medium")
+            a.number_input("Personas", 1, 12, 2, key="personas_in")
+            b.selectbox("Tiempo", [15, 30, 45, 60], index=1, key="tiempo_in", format_func=lambda m: f"{m} min o menos")
+            e.selectbox("Alimentación", list(n.DIETAS), key="dieta_in")
+            f.selectbox("Tipo de plato", ["Cualquiera"] + n.CATEGORIAS, key="tipo_in")
         st.toggle("Mostrar también recetas a las que les falta 1 ingrediente barato", value=False, key="falta_in",
                   help="Apagado: solo recetas en las que no compras nada.")
         tiene = lo_que_tiene()

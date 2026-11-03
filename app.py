@@ -100,7 +100,7 @@ def sello_falta(r) -> str:
 
 
 ESTILOS = """<style>
-@import url('https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&display=swap');
 .dp-sello { display:flex; align-items:baseline; gap:.55rem; background:#0E9C98; color:#fff; border-radius:14px;
   padding:.55rem .9rem; margin:.35rem 0 .3rem; }
 .dp-sello b { font-size:1.7rem; font-weight:800; letter-spacing:-.03em; }
@@ -115,33 +115,42 @@ ESTILOS = """<style>
 .dp-banner .cero { background:#0E9C98; border-color:#0E9C98; }
 .dp-banner .cero small, .dp-banner .cero b { color:#fff; }
 .dp-usa li { margin:.1rem 0; }
-.st-key-papel { position:relative; background-color:#FFFDF4; border-radius:6px; padding:1.1rem 1.2rem 1.2rem 3.4rem !important;
-  background-image:repeating-linear-gradient(to bottom, transparent 0 38px, #CBDDEB 38px 39px);
-  background-position:0 54px; box-shadow:0 1px 0 #E9E2CF, 0 8px 18px rgba(80,50,20,.12); transform:rotate(-.4deg);
-  border-top:10px solid #F1E9D2; gap:0 !important; }
-.st-key-papel::before { content:""; position:absolute; top:0; bottom:0; left:2.4rem; width:2px; background:#F3A2A2; }
-.st-key-papel::after { content:""; position:absolute; top:-10px; left:0; right:0; height:10px;
-  background:radial-gradient(circle at 8px -2px, transparent 6px, #F1E9D2 6.5px) repeat-x; background-size:16px 10px; }
-.papel-titulo { font-family:'Patrick Hand', 'Comic Sans MS', cursive; font-size:1.7rem; color:#C0392B; line-height:38px;
-  margin:0 0 2px; }
+.st-key-papel { position:relative; background:#FFFFFF; border-radius:3px; padding:2.2rem 1.6rem 1.3rem 1.8rem !important;
+  background-image:repeating-linear-gradient(to bottom, transparent 0 39px, #E6EEF4 39px 40px); background-position:0 66px;
+  box-shadow:0 2px 4px rgba(0,0,0,.06), 0 14px 28px rgba(80,50,20,.16); transform:rotate(-2.2deg);
+  margin:1.2rem .6rem .8rem; gap:0 !important; }
+.st-key-papel::before { content:""; position:absolute; top:-14px; left:50%; width:34px; height:34px; margin-left:-17px;
+  border-radius:50%; background:#0E9C98; box-shadow:inset -4px -5px 0 rgba(0,0,0,.18), 0 4px 8px rgba(0,0,0,.25); z-index:3; }
+.st-key-papel::after { content:""; position:absolute; top:-6px; left:50%; width:10px; height:8px; margin-left:-9px;
+  border-radius:50%; background:rgba(255,255,255,.55); z-index:4; }
+.papel-titulo { font-family:'Caveat', 'Segoe Print', cursive; font-weight:700; font-size:2.1rem; color:#E2571A; line-height:40px;
+  margin:0 0 10px; transform:rotate(-1deg); }
 .st-key-papel [data-testid="stVerticalBlock"], .st-key-papel [data-testid="stHorizontalBlock"] { gap:0 !important; }
 .st-key-papel [data-testid="stElementContainer"] { margin:0 !important; }
-.st-key-papel [data-testid="stCheckbox"] { height:39px; min-height:39px; display:flex; align-items:flex-end; padding-bottom:3px; }
-.st-key-papel [data-testid="stCheckbox"] label p { font-family:'Patrick Hand', 'Comic Sans MS', cursive; font-size:1.3rem;
+.st-key-papel [data-testid="stCheckbox"] { height:40px; min-height:40px; display:flex; align-items:flex-end; padding-bottom:2px; }
+.st-key-papel [data-testid="stCheckbox"], .st-key-papel [data-testid="stCheckbox"] * { overflow:visible !important; text-overflow:clip !important; white-space:nowrap; }
+.st-key-papel [data-testid="stCheckbox"] label p { font-family:'Caveat', 'Segoe Print', cursive; font-weight:500; font-size:1.55rem;
   color:#23396B; line-height:1; }
-.st-key-papel [data-testid="stCheckbox"] label:has(input:checked) p { color:#0E9C98; }
-.st-key-papel [data-testid="stTextInput"] label p { font-family:'Patrick Hand', cursive; font-size:1.3rem; color:#C0392B; }
-.st-key-papel [data-testid="stTextInput"] input { font-family:'Patrick Hand', cursive; font-size:1.25rem; color:#23396B;
-  background:transparent; border:none; border-bottom:2px dashed #CBDDEB; border-radius:0; }
+.st-key-papel [data-testid="stCheckbox"] label:has(input:checked) p { color:#0E9C98; font-weight:700; }
+.st-key-papel [data-testid="stColumn"]:nth-child(1) [data-testid="stElementContainer"]:nth-child(odd) { transform:translateX(2px) rotate(-1.4deg); }
+.st-key-papel [data-testid="stColumn"]:nth-child(1) [data-testid="stElementContainer"]:nth-child(even) { transform:translateX(-3px) rotate(.8deg); }
+.st-key-papel [data-testid="stColumn"]:nth-child(2) [data-testid="stElementContainer"]:nth-child(3n) { transform:translateX(5px) rotate(1.5deg); }
+.st-key-papel [data-testid="stColumn"]:nth-child(2) [data-testid="stElementContainer"]:nth-child(3n+1) { transform:translateX(-2px) rotate(-.9deg); }
+.st-key-papel [data-testid="stColumn"]:nth-child(3) [data-testid="stElementContainer"]:nth-child(odd) { transform:translateX(-4px) rotate(1.1deg); }
+.st-key-papel [data-testid="stColumn"]:nth-child(3) [data-testid="stElementContainer"]:nth-child(even) { transform:translateX(3px) rotate(-1.6deg); }
+.st-key-papel [data-testid="stColumn"]:nth-child(4) [data-testid="stElementContainer"]:nth-child(3n+2) { transform:translateX(6px) rotate(-1.2deg); }
+.st-key-papel [data-testid="stColumn"]:nth-child(4) [data-testid="stElementContainer"]:nth-child(3n) { transform:translateX(-3px) rotate(1.3deg); }
+.st-key-papel [data-testid="stTextInput"] label p { font-family:'Caveat', cursive; font-weight:700; font-size:1.6rem; color:#E2571A; }
+.st-key-papel [data-testid="stTextInput"] input { font-family:'Caveat', cursive; font-size:1.5rem; color:#23396B;
+  background:transparent; border:none; border-bottom:2px dashed #D5E2EC; border-radius:0; }
 .st-key-papel [data-testid="stTextInput"] [data-baseweb="input"],
 .st-key-papel [data-testid="stTextInput"] [data-baseweb="base-input"] { background:transparent !important; border:none !important; box-shadow:none !important; }
 .st-key-papel [data-testid="stTextInput"] { margin-top:.4rem; }
 @media (max-width: 640px) {
-  .st-key-papel { padding-left:2.6rem !important; }
-  .st-key-papel::before { left:1.8rem; }
+  .st-key-papel { padding-left:1.2rem !important; padding-right:1rem !important; transform:rotate(-1.4deg); }
   .st-key-papel [data-testid="stHorizontalBlock"] { flex-wrap:wrap !important; flex-direction:row !important; }
   .st-key-papel [data-testid="stColumn"] { width:50% !important; flex:0 0 50% !important; min-width:0 !important; }
-  .st-key-papel [data-testid="stCheckbox"] label p { font-size:1.15rem; }
+  .st-key-papel [data-testid="stCheckbox"] label p { font-size:1.4rem; }
 }
 </style>"""
 

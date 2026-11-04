@@ -103,11 +103,59 @@ def _buscar_foto(r):
         return None
 
 
+@st.cache_resource
+def _creadas_hoy() -> dict:
+    return {}                                # día -> cuántas imágenes se crearon (límite para no gastar de más)
+
+
+MAX_IMAGENES_DIA = 30
+MODELOS_IMAGEN = ("gemini-2.5-flash-image", "gemini-3.1-flash-image-preview", "gemini-3-pro-image-preview")
+
+
+@st.cache_data(ttl=60 * 86400, show_spinner=False, max_entries=1000, persist="disk")
+def crear_imagen(plato: str, ingredientes: str) -> bytes | None:
+    """La IA crea la foto del plato (solo para recetas sin foto real). Se guarda para no pagarla dos veces."""
+    from google.genai import types
+    cuenta = _creadas_hoy()
+    hoy = time.strftime("%Y-%m-%d")
+    if cuenta.get(hoy, 0) >= MAX_IMAGENES_DIA:
+        raise SinFoto("límite diario de imágenes")
+    cliente = cliente_gemini()
+    prompt = (f"Fotografía gastronómica realista, apetitosa, luz natural, plato servido sobre una mesa, vista de 3/4: "
+              f"{plato}. Lleva SOLO estos ingredientes, que se reconozcan: {ingredientes}. "
+              "Sin texto, sin personas, sin manos, sin ingredientes extra.")
+    for modelo in MODELOS_IMAGEN:
+        try:
+            resp = cliente.models.generate_content(model=modelo, contents=prompt, config=types.GenerateContentConfig(
+                response_modalities=["IMAGE"]))
+            datos = next(p.inline_data.data for p in resp.candidates[0].content.parts if p.inline_data)
+            cuenta[hoy] = cuenta.get(hoy, 0) + 1
+            print(f"[imagen] creada para {plato!r} con {modelo} ({cuenta[hoy]} hoy)", flush=True)
+            return datos
+        except Exception as e:  # noqa: BLE001
+            print(f"[imagen] {modelo} falló: {str(e)[:200]}", flush=True)
+    raise SinFoto("no se pudo crear la imagen")
+
+
+def _imagen_ia(r):
+    if not secreto("GEMINI_API_KEY"):
+        return None
+    ings = ", ".join(i.nombre for i in r.ingredientes if not i.basico_de_despensa)
+    try:
+        datos = crear_imagen(r.nombre, ings)
+    except Exception:  # noqa: BLE001
+        return None
+    return {"url": datos, "fuente": "IA"} if datos else None
+
+
 def _pintar_foto(r, f):
     usadas = st.session_state.setdefault("_fotos_usadas", {})   # una misma foto no se repite en dos recetas
     if f and usadas.setdefault(f["url"], r.nombre) != r.nombre:
         f = None
-    if f:
+    if f and f.get("fuente") == "IA":
+        st.image(f["url"], width="stretch")
+        st.markdown('<div class="sz-credito">Imagen creada con IA</div>', unsafe_allow_html=True)
+    elif f:
         st.image(f["url"], width="stretch")
         d.credito_foto(f)
     else:
@@ -138,7 +186,7 @@ def poner_fotos():
 
     def una(r):
         add_script_run_ctx(None, ctx)
-        return _buscar_foto(r)
+        return _buscar_foto(r) or _imagen_ia(r)       # sin foto real: la IA la crea
     t0 = time.time()
     with ThreadPoolExecutor(6) as ex:
         fotos_ = list(ex.map(una, [r for _, r in pend]))

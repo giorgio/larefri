@@ -133,9 +133,16 @@ export default function(component) {
   let el = parentElement.querySelector(".fin");
   if (!el) { el = document.createElement("div"); el.className = "fin"; el.style.height = "1px"; parentElement.appendChild(el); }
   if (el.__obs) el.__obs.disconnect();
+  if (!window.__escucha) { window.__escucha = true; window.__bajo = false;
+    document.addEventListener("wheel", () => { window.__bajo = true; }, { passive: true, capture: true });
+    document.addEventListener("touchmove", () => { window.__bajo = true; }, { passive: true, capture: true });
+    document.addEventListener("keydown", (e) => { if (/Page|Arrow|End| /.test(e.key)) window.__bajo = true; }, true); }
   let avisado = false;
   el.__obs = new IntersectionObserver((e) => {
-    if (e[0].isIntersecting && !avisado) { avisado = true; setTriggerValue("cargar", data.n); }
+    // no cargar si hay una receta abierta (se cerraría) ni si la persona no ha bajado
+    if (e[0].isIntersecting && !avisado && !document.querySelector('[role="dialog"]') && window.__bajo) {
+      avisado = true; setTriggerValue("cargar", data.n);
+    }
   }, { rootMargin: "400px" });
   el.__obs.observe(el);
   return () => el.__obs && el.__obs.disconnect();

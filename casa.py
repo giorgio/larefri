@@ -270,6 +270,21 @@ LO QUE TIENE EN CASA: {tiene}
 {recetas}"""
 
 
+def _mismos_ingredientes(r, original) -> bool:
+    """Cada ingrediente principal del plato real (pollo, fréjol, aguacate...) debe seguir en la receta traducida."""
+    import mealdb
+    inverso = {en: es for es, ens in mealdb.INGLES.items() for en in ens}
+    suyos = [i.nombre for i in r.ingredientes]
+    for nombre, _ in mealdb.ingredientes(original):
+        k = mealdb._norm(nombre)
+        if k in {mealdb._norm(b) for b in mealdb.BASICOS_EN}:
+            continue
+        es = next((v for en, v in inverso.items() if mealdb._norm(en) == k or mealdb._norm(en) in k.split()), None)
+        if es and not lo_tiene(es, suyos):
+            return False
+    return True
+
+
 def recetas_del_recetario(cliente, tiene, personas, tiempo, dieta, basicos, excluir=()):
     """Platos reales de TheMealDB que salen con lo que hay, traducidos por la IA. [] si no hay o falla."""
     try:
@@ -289,10 +304,13 @@ def recetas_del_recetario(cliente, tiene, personas, tiempo, dieta, basicos, excl
     for j, r in enumerate(cat.recetas):
         r = n.limpiar_receta(r)
         r.plato_conocido = True
-        if r.busqueda_foto not in nombres and len(cat.recetas) == len(platos):
-            r.busqueda_foto = nombres[j]                         # la IA cambió el nombre: van en el mismo orden
-        if r.busqueda_foto in nombres:
-            r.busqueda_foto = "mealdb:" + r.busqueda_foto       # su foto es la del recetario
+        if r.busqueda_foto not in nombres:
+            continue                                             # no se sabe de qué plato es: se descarta
+        original = platos[nombres.index(r.busqueda_foto)]
+        if not _mismos_ingredientes(r, original):
+            print(f"[mealdb] descarto {r.nombre!r}: la IA le cambió los ingredientes", flush=True)
+            continue                                             # la IA "adaptó" el plato: ya no es el real
+        r.busqueda_foto = "mealdb:" + r.busqueda_foto           # su foto es la del recetario
         if not r.ingredientes or not r.pasos or not n.cumple_dieta(r, dieta) or r.tiempo_minutos > tiempo + 15:
             continue
         r = revisar(r, todo)

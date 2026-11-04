@@ -325,11 +325,6 @@ def ver_receta(r):
     for k, p in enumerate(r.pasos, 1):
         st.markdown(f"{k}. {p}")
     st.caption(f"Dificultad: {r.dificultad} · {r.tiempo_minutos} min · para {r.porciones}")
-    k = c.costo_cocinar(r.tiempo_minutos)
-    st.markdown(f"**Lo que cuesta cocinarla:** gas ~${max(k['gas'], 0.01):.2f} · o luz (inducción) "
-                f"~${max(k['luz'], 0.01):.2f} · tu tiempo ({r.tiempo_minutos} min) vale ~${k['tiempo']:.2f}")
-    st.caption("Aproximado: gas doméstico subsidiado, luz a $0,092 el kWh y tu tiempo al valor de una hora "
-               "de salario básico.")
     if r.alergenos:
         st.warning("⚠️ **Alérgenos:** " + ", ".join(r.alergenos) + ". Es una estimación: si tienes alergias, "
                    "revisa la etiqueta de cada producto.")

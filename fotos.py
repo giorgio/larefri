@@ -211,6 +211,31 @@ def candidatos_unsplash(consulta: str, clave: str, maximo: int = 3) -> list[dict
     return salida[:maximo]
 
 
+MEALDB = "https://www.themealdb.com/api/json/v1/{clave}/search.php"
+
+
+def foto_mealdb(consulta: str, clave: str = "1") -> dict | None:
+    """Foto de TheMealDB (recetario real: cada plato trae SU foto). Solo si el nombre coincide con el plato."""
+    palabras = palabras_plato(consulta)
+    if not palabras:
+        return None
+    try:
+        r = requests.get(MEALDB.format(clave=clave or "1"), params={"s": consulta}, timeout=4)
+        comidas = (r.json() or {}).get("meals") or [] if r.status_code == 200 else []
+    except (requests.RequestException, ValueError):
+        return None
+    raices = {_raiz(w) for w in palabras}
+    for m in comidas:
+        nombre = (m.get("strMeal") or "").lower()
+        suyas = {_raiz(w) for w in palabras_plato(nombre)}
+        if raices <= suyas and len(suyas) <= len(raices) + 1 and m.get("strMealThumb"):
+            print(f"[foto] TheMealDB: {consulta!r} -> {m.get('strMeal')!r}", flush=True)
+            return {"url": m["strMealThumb"], "url_chica": m["strMealThumb"] + "/medium", "autor": "TheMealDB",
+                    "pagina": "https://www.themealdb.com/", "licencia": "", "licencia_url": "",
+                    "fuente": "TheMealDB", "fuente_url": "https://www.themealdb.com/"}
+    return None
+
+
 def buscar_foto(consulta: str, clave_pexels: str | None = None, clave_unsplash: str | None = None,
                 verificar=None) -> dict | None:
     """Devuelve {'url','autor','pagina','licencia','licencia_url','fuente'} o None.
@@ -218,6 +243,11 @@ def buscar_foto(consulta: str, clave_pexels: str | None = None, clave_unsplash: 
     if not consulta:
         return None
     candidatas = []
+    m = foto_mealdb(consulta)                          # primero el recetario real (su foto ES de ese plato)
+    if m:
+        ok = True if verificar is None else verificar(m["url_chica"])
+        if ok is not False:
+            return m
     if clave_unsplash:
         candidatas += candidatos_unsplash(consulta, clave_unsplash)
     if clave_pexels:

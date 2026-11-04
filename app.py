@@ -100,6 +100,9 @@ def mostrar_foto(r):
         except Exception as e:  # noqa: BLE001
             print(f"[foto] sin foto para {r.nombre!r}: {type(e).__name__} {e}", flush=True)
             malas[r.busqueda_foto] = time.time()
+    usadas = st.session_state.setdefault("_fotos_usadas", {})   # una misma foto no se repite en dos recetas
+    if f and usadas.setdefault(f["url"], r.nombre) != r.nombre:
+        f = None
     if f:
         st.image(f["url"], width="stretch")
         d.credito_foto(f)
@@ -110,6 +113,7 @@ def mostrar_foto(r):
 def ir(_pagina="inicio", *_):
     """El logo vuelve al principio: borra los resultados."""
     st.session_state["cero"], st.session_state["uno"], st.session_state["pedido"] = [], [], None
+    st.session_state["_fotos_usadas"] = {}
 
 
 def lo_que_tiene() -> list[str]:

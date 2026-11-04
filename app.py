@@ -168,7 +168,7 @@ ESTILOS = """<style>
   transform:rotate(-2.2deg);
   margin:1.2rem .6rem .8rem; gap:0 !important; }
 div:has(> .st-key-papel) { position:relative; filter:drop-shadow(0 2px 2px rgba(0,0,0,.08)) drop-shadow(0 12px 14px rgba(80,50,20,.16)); }
-div:has(> .st-key-papel)::before { content:""; position:absolute; top:20px; left:50%; width:46px; height:46px; margin-left:-23px;
+div:has(> .st-key-papel)::before { content:""; position:absolute; top:40px; left:50%; width:46px; height:46px; margin-left:-23px;
   border-radius:12px; background:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2048%2048%22%3E%3Crect%20width%3D%2248%22%20height%3D%2248%22%20rx%3D%2212%22%20fill%3D%22%23FF7A1A%22/%3E%3Cpath%20d%3D%22M18%2012%20H30%20Q35%2012%2035%2017%20V37%20Q35%2042%2030%2042%20H18%20Q13%2042%2013%2037%20V17%20Q13%2012%2018%2012%20Z%20M13%2023%20H35%20M18%2016%20V19%20M18%2027%20V33%20M24%2012%20C24%207%2028%204%2033%204%20C33%209%2029%2012%2024%2012%20Z%22%20fill%3D%22none%22%20stroke%3D%22%23fff%22%20stroke-width%3D%223.2%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22/%3E%3C/svg%3E") center/100% no-repeat; transform:rotate(7deg);
   box-shadow:0 5px 10px rgba(0,0,0,.28), inset 0 -3px 0 rgba(0,0,0,.12); z-index:3; }
 .papel-titulo { font-family:'Caveat', 'Segoe Print', cursive; font-weight:700; font-size:2.1rem; color:#E2571A; line-height:40px;

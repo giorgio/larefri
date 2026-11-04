@@ -59,7 +59,7 @@ def _sin_variantes(lista):
 
 
 
-POR_BUSQUEDA = 6
+POR_BUSQUEDA = 4
 
 
 class IngredienteCasa(n.Ingrediente):
@@ -213,20 +213,24 @@ def buscar_con_lo_que_hay(cliente, tiene: list[str], personas: int, tiempo: int,
         faltante=UN_FALTANTE if permitir_faltante else SIN_FALTANTES,
     )
     todo = list(tiene) + basicos
-    cero = [] if categoria else recetas_del_recetario(cliente, tiene, personas, tiempo, dieta, basicos, excluir)
-    uno = []
-    excluir = list(excluir) + [r.nombre for r in cero]
-    if len(cero) >= cantidad:
-        return cero[:cantidad], uno
-    prompt = prompt.replace(f"Propón {cantidad} recetas", f"Propón {cantidad - len(cero)} recetas")
+    # el recetario y la IA trabajan AL MISMO TIEMPO (antes era uno después del otro)
+    from concurrent.futures import ThreadPoolExecutor
     if excluir:
         prompt += "\nNo repitas estas recetas: " + ", ".join(excluir)
-    try:
-        cat, _ = n.llamar_gemini(cliente, prompt, CatalogoCasa, razonamiento="minimal")
-    except n.ErrorIA:
-        if cero:
-            return cero, uno
-        raise
+    with ThreadPoolExecutor(2) as ex:
+        f_rec = ex.submit(lambda: [] if categoria else
+                          recetas_del_recetario(cliente, tiene, personas, tiempo, dieta, basicos, excluir))
+        f_ia = ex.submit(n.llamar_gemini, cliente, prompt, CatalogoCasa, razonamiento="minimal")
+        cero = f_rec.result()
+        try:
+            cat, _ = f_ia.result()
+        except n.ErrorIA:
+            if cero:
+                return cero, []
+            raise
+    uno = []
+    ya = {r.nombre for r in cero}
+    cat.recetas = [r for r in cat.recetas if r.nombre not in ya]
     for r in cat.recetas:
         r = n.limpiar_receta(r)
         if not r.ingredientes or not r.pasos or not n.cumple_dieta(r, dieta) or not r.plato_conocido \

@@ -91,15 +91,19 @@ def foto(consulta: str, plato: str = "", version: int = 13):
     return f
 
 
-def mostrar_foto(r):
+def _buscar_foto(r):
     malas = _sin_foto_reciente()
-    f = None
-    if time.time() - malas.get(r.busqueda_foto, 0) > 3600:
-        try:
-            f = foto(r.busqueda_foto, r.nombre)
-        except Exception as e:  # noqa: BLE001
-            print(f"[foto] sin foto para {r.nombre!r}: {type(e).__name__} {e}", flush=True)
-            malas[r.busqueda_foto] = time.time()
+    if time.time() - malas.get(r.busqueda_foto, 0) <= 3600:
+        return None
+    try:
+        return foto(r.busqueda_foto, r.nombre)
+    except Exception as e:  # noqa: BLE001
+        print(f"[foto] sin foto para {r.nombre!r}: {type(e).__name__} {e}", flush=True)
+        malas[r.busqueda_foto] = time.time()
+        return None
+
+
+def _pintar_foto(r, f):
     usadas = st.session_state.setdefault("_fotos_usadas", {})   # una misma foto no se repite en dos recetas
     if f and usadas.setdefault(f["url"], r.nombre) != r.nombre:
         f = None
@@ -108,6 +112,38 @@ def mostrar_foto(r):
         d.credito_foto(f)
     else:
         d.foto_vacia()
+
+
+PENDIENTES: list = []          # (hueco, receta): las fotos se ponen DESPUÉS de mostrar todas las recetas
+
+
+def mostrar_foto(r, despues: bool = False):
+    if despues:
+        hueco = st.empty()
+        with hueco.container():
+            d.foto_vacia()
+        PENDIENTES.append((hueco, r))
+        return
+    _pintar_foto(r, _buscar_foto(r))
+
+
+def poner_fotos():
+    """Busca las fotos de todas las tarjetas a la vez (en paralelo) y las pone en su lugar."""
+    from concurrent.futures import ThreadPoolExecutor
+    from streamlit.runtime.scriptrunner import add_script_run_ctx, get_script_run_ctx
+    pend, ctx = list(PENDIENTES), get_script_run_ctx()
+    PENDIENTES.clear()
+    if not pend:
+        return
+
+    def una(r):
+        add_script_run_ctx(None, ctx)
+        return _buscar_foto(r)
+    with ThreadPoolExecutor(6) as ex:
+        fotos_ = list(ex.map(una, [r for _, r in pend]))
+    for (hueco, r), f in zip(pend, fotos_):
+        with hueco.container():
+            _pintar_foto(r, f)
 
 
 def ir(_pagina="inicio", *_):
@@ -340,7 +376,7 @@ def ver_receta(r):
 
 def tarjeta(r, clave: str, cero: bool):
     with st.container(border=True, key=f"rc_{clave}"):
-        mostrar_foto(r)
+        mostrar_foto(r, despues=True)
         d.info_receta(r)
         st.markdown(sello_cero(r) if cero else sello_falta(r), unsafe_allow_html=True)
         if st.button("Ver receta", key=f"ver_{clave}", icon=":material/menu_book:", type="primary", width="stretch"):
@@ -443,6 +479,7 @@ def resultados():
                     unsafe_allow_html=True)
         cuadricula(uno, "u", False)
     st.write("")
+    poner_fotos()
     total = len(cero) + len(uno)
     if st.session_state.get("sin_mas"):
         st.caption("Esas son todas las recetas que salen con lo que tienes.")

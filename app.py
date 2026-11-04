@@ -426,8 +426,10 @@ def resultados():
     usados = sum(1 for t in tiene if any(c.lo_tiene(i.nombre, [t]) for r in cero for i in r.ingredientes
                                          if not i.basico_de_despensa))
     st.markdown(
-        f'<div class="dp-banner"><div class="cero"><small>Gasto de hoy</small><b>$0.00</b></div>'
-        f'<div><small>Recetas sin comprar nada</small><b>{len(cero)}</b></div></div>',
+        '<div class="dp-banner"><div class="cero"><small>Gasto de hoy</small><b>$0.00</b></div>'
+        + (f'<div><small>Recetas sin comprar nada</small><b>{len(cero)} de {len(cero) + len(uno)}</b>'
+           f'<small>{len(uno)} necesitan 1 ingrediente más</small></div></div>' if uno else
+           f'<div><small>Recetas sin comprar nada</small><b>{len(cero)}</b></div></div>'),
         unsafe_allow_html=True)
     if cero:
         st.markdown('<p class="sz-seccion">✅ Con lo que tienes: no compras nada</p>', unsafe_allow_html=True)

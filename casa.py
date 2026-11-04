@@ -143,13 +143,19 @@ def lo_tiene(nombre_ingrediente: str, tiene: list[str]) -> bool:
     return False
 
 
+def es_basico(i) -> bool:
+    """Solo cuenta como básico si DE VERDAD es sal, aceite, especia... (la IA a veces marca el tomate como básico)."""
+    return i.basico_de_despensa and lo_tiene(i.nombre, BASICOS + ["Pimienta negra", "Especias", "Hierbas"])
+
+
 def faltantes(r: RecetaCasa, tiene: list[str]) -> list[str]:
-    return [i.nombre for i in r.ingredientes if not i.basico_de_despensa and not lo_tiene(i.nombre, tiene)]
+    return [i.nombre for i in r.ingredientes if not es_basico(i) and not lo_tiene(i.nombre, tiene)]
 
 
 def revisar(r: RecetaCasa, tiene: list[str]) -> RecetaCasa:
     """No confiamos solo en la IA: marcamos nosotros qué tiene y qué no."""
     for i in r.ingredientes:
+        i.basico_de_despensa = es_basico(i)
         i.de_tu_casa = i.basico_de_despensa or lo_tiene(i.nombre, tiene)
     return r
 

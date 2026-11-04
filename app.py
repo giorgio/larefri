@@ -363,7 +363,7 @@ def buscar(mas=False):
     s = st.session_state
     tiene = lo_que_tiene()
     pedido = dict(tiene=tiene, personas=s["personas_in"], tiempo=s["tiempo_in"], dieta=s.get("dieta_in", "Todas"),
-                  categoria="" if s["tipo_in"] == "Cualquiera" else s["tipo_in"], permitir=False,
+                  categoria="" if s["tipo_in"] == "Cualquiera" else s["tipo_in"], permitir=True,
                   basicos=list(s.get("basicos") or []))
     esperar_turno()
     excluir = [r.nombre for r in s["cero"] + s["uno"]] if mas else []

@@ -486,11 +486,17 @@ ingredientes crudos o sueltos, personas o lugares como tema principal, o si no s
 Responde solo SI o NO."""
 
 
+_PAUSA_FOTOS = [0.0]
+
+
 def foto_coincide(cliente, imagen: bytes, plato: str, busqueda: str = "") -> bool:
     """La IA mira la foto y dice si de verdad es ese plato (para no mostrar fotos que no tienen sentido)."""
     from google.genai import types
     ultimo = None
-    for modelo in (MODELO_RESPALDO, MODELO_PRINCIPAL):
+    import time as _t
+    if _t.time() < _PAUSA_FOTOS[0]:
+        raise ErrorIA("revisión de fotos en pausa (cuota de la IA)")
+    for modelo in (MODELO_RESPALDO,):                # solo el modelo liviano: la cuota del principal es para las recetas
         for pensar in (True, False):
             try:
                 cfg = dict(temperature=0, max_output_tokens=400)
@@ -514,7 +520,10 @@ def foto_coincide(cliente, imagen: bytes, plato: str, busqueda: str = "") -> boo
                     raise ErrorIA("La clave de la IA no es válida.") from e
                 if _codigo(e) == 400 and pensar:
                     continue                                 # el modelo no acepta ese ajuste: probar sin él
-                if _codigo(e) in (404, 429):
+                if _codigo(e) == 429:                        # sin cuota: no revisar fotos por 1 hora
+                    _PAUSA_FOTOS[0] = _t.time() + 3600
+                    break
+                if _codigo(e) == 404:
                     break
     print(f"[foto] no se pudo revisar {plato!r}: {ultimo}", flush=True)
     raise ErrorIA(f"No se pudo revisar la foto: {ultimo}")

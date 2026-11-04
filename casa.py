@@ -102,7 +102,8 @@ REGLAS
 
 SIN_FALTANTES = "Ningún ingrediente nuevo: la receta tiene que salir con lo que hay."
 UN_FALTANTE = ("Excepción: hasta la MITAD de las recetas pueden tener UN solo ingrediente que no tiene, "
-               "barato y fácil de conseguir; márcalo de_tu_casa = false.")
+               "barato y fácil de conseguir; márcalo de_tu_casa = false. Cada una de esas recetas debe necesitar un "
+               "ingrediente DISTINTO (no repitas el mismo faltante, por ejemplo huevo, en varias recetas).")
 
 
 # ---------------------------------------------------------------------------
@@ -214,7 +215,20 @@ def buscar_con_lo_que_hay(cliente, tiene: list[str], personas: int, tiempo: int,
     if not cero and not uno:
         raise n.ErrorIA("Con esos ingredientes no salió ninguna receta sin comprar nada. "
                         "Agrega uno o dos ingredientes más que tengas y vuelve a buscar.")
-    return cero, sorted(uno, key=costo_faltantes)
+    return cero, un_faltante_distinto(sorted(uno, key=costo_faltantes))
+
+
+def un_faltante_distinto(uno, ya=()):
+    """Máximo UNA receta por cada ingrediente que falta (que no salgan 3 recetas a las que les falta huevo)."""
+    vistos = {_raiz(n._clave(x).split()[0]) for x in ya if x}
+    out = []
+    for r in uno:
+        k = {_raiz(n._clave(i.nombre).split()[0]) for i in r.ingredientes if not i.de_tu_casa and i.nombre.strip()}
+        if k & vistos:
+            continue
+        vistos |= k
+        out.append(r)
+    return out
 
 
 PROMPT_MEALDB = """Estas son recetas REALES de un recetario (TheMealDB). Conviértelas al formato pedido, en español

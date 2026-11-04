@@ -378,7 +378,8 @@ def buscar(mas=False):
     if mas:
         vistos = {r.nombre for r in s["cero"] + s["uno"]}
         s["cero"] = s["cero"] + [r for r in cero if r.nombre not in vistos]
-        s["uno"] = s["uno"] + [r for r in uno if r.nombre not in vistos]
+        ya = [i.nombre for r in s["uno"] for i in r.ingredientes if not i.de_tu_casa]
+        s["uno"] = s["uno"] + c.un_faltante_distinto([r for r in uno if r.nombre not in vistos], ya)
     else:
         s["cero"], s["uno"], s["sin_mas"] = cero, uno, False
     s["pedido"] = pedido

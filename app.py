@@ -417,11 +417,13 @@ def resultados():
     if not s["pedido"]:
         return
     st.write("")
-    ahorro_max = max([c.ahorro(r) for r in cero] or [0])
+    tiene = lo_que_tiene()
+    usados = sum(1 for t in tiene if any(c.lo_tiene(i.nombre, [t]) for r in cero for i in r.ingredientes
+                                         if not i.basico_de_despensa))
     st.markdown(
         f'<div class="dp-banner"><div class="cero"><small>Gasto de hoy</small><b>$0.00</b></div>'
         f'<div><small>Recetas sin comprar nada</small><b>{len(cero)}</b></div>'
-        f'<div><small>Te ahorras hasta</small><b>${ahorro_max:.2f}</b></div></div>',
+        f'<div><small>Ingredientes de tu refri que se usan</small><b>{usados} de {len(tiene)}</b></div></div>',
         unsafe_allow_html=True)
     if cero:
         st.markdown('<p class="sz-seccion">✅ Con lo que tienes: no compras nada</p>', unsafe_allow_html=True)

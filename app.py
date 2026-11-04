@@ -376,9 +376,11 @@ def buscar(mas=False):
     finally:
         espera.empty()
     if mas:
-        s["cero"], s["uno"] = s["cero"] + cero, s["uno"] + uno
+        vistos = {r.nombre for r in s["cero"] + s["uno"]}
+        s["cero"] = s["cero"] + [r for r in cero if r.nombre not in vistos]
+        s["uno"] = s["uno"] + [r for r in uno if r.nombre not in vistos]
     else:
-        s["cero"], s["uno"] = cero, uno
+        s["cero"], s["uno"], s["sin_mas"] = cero, uno, False
     s["pedido"] = pedido
 
 
@@ -439,12 +441,18 @@ def resultados():
                     unsafe_allow_html=True)
         cuadricula(uno, "u", False)
     st.write("")
-    if st.button("Ver otras recetas con lo mismo", icon=":material/refresh:", width="stretch", key="mas"):
+    total = len(cero) + len(uno)
+    if st.session_state.get("sin_mas"):
+        st.caption("Esas son todas las recetas que salen con lo que tienes.")
+    elif total < 30 and campo.llego_al_final(total, key=f"fin_{total}"):    # bajó hasta el final: cargar más
         try:
+            antes = total
             buscar(mas=True)
-            st.rerun()
-        except n.ErrorIA as err:
-            st.error(str(err))
+            if len(st.session_state["cero"]) + len(st.session_state["uno"]) == antes:
+                st.session_state["sin_mas"] = True
+        except n.ErrorIA:
+            st.session_state["sin_mas"] = True
+        st.rerun()
 
 
 d.aplicar_estilos()

@@ -125,3 +125,27 @@ def algo_mas(sugerencias: list[str], placeholder: str, key: str = "algo_mas") ->
     items = list(getattr(r, "lista", None) or previo or [])
     st.session_state[key + "_items"] = items
     return items
+
+
+_JS_FINAL = r"""
+export default function(component) {
+  const { setTriggerValue, parentElement, data } = component;
+  let el = parentElement.querySelector(".fin");
+  if (!el) { el = document.createElement("div"); el.className = "fin"; el.style.height = "1px"; parentElement.appendChild(el); }
+  if (el.__obs) el.__obs.disconnect();
+  let avisado = false;
+  el.__obs = new IntersectionObserver((e) => {
+    if (e[0].isIntersecting && !avisado) { avisado = true; setTriggerValue("cargar", data.n); }
+  }, { rootMargin: "400px" });
+  el.__obs.observe(el);
+  return () => el.__obs && el.__obs.disconnect();
+}
+"""
+
+_final = st.components.v2.component("larefri_final", html="", js=_JS_FINAL)
+
+
+def llego_al_final(n: int, key: str = "fin") -> bool:
+    """True cuando la persona bajó hasta el final de las recetas (para cargar más sin botón)."""
+    r = _final(key=key, data={"n": n}, on_cargar_change=lambda: None)
+    return bool(getattr(r, "cargar", None))

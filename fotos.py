@@ -243,7 +243,8 @@ def buscar_foto(consulta: str, clave_pexels: str | None = None, clave_unsplash: 
         ok = True if verificar is None else verificar(c.get("url_chica") or c["url"])
         if ok is None:          # la IA no pudo revisar (cuota): aceptar si el título de la foto nombra el plato
             texto = _texto_unsplash(c.get("_crudo") or {}) if c.get("fuente") == "Unsplash" else consulta.lower()
-            ok = es_del_plato(texto, palabras_plato(consulta), minimo=1)
+            p = palabras_plato(consulta)                 # estricto: la descripción debe nombrar TODO el plato
+            ok = len(p) >= 2 and es_del_plato(texto, p, minimo=len({_raiz(w) for w in p}))
             print(f"[foto] sin revisión de IA, {'acepto' if ok else 'descarto'} por título", flush=True)
         if not ok:
             if not candidatas and not probado_commons:   # ninguna de Unsplash sirvió: probar Wikimedia

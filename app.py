@@ -435,7 +435,7 @@ def resultados():
     else:
         st.info("Con lo que marcaste no salió ninguna receta sin comprar. Agrega uno o dos ingredientes más que "
                 "tengas (un huevo, una papa, un poco de arroz) y vuelve a buscar.")
-    if uno:
+    if uno and (s.get("sin_mas") or len(cero) >= 30):     # las que necesitan comprar algo, al final de todo
         st.write("")
         st.markdown('<p class="sz-seccion">🛒 Si quieres gastar un poquito: te falta solo una cosa</p>',
                     unsafe_allow_html=True)

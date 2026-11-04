@@ -69,7 +69,7 @@ def _sin_foto_reciente() -> dict:
 
 
 @st.cache_data(ttl=7 * 86400, show_spinner=False, max_entries=500)
-def foto(consulta: str, plato: str = "", version: int = 12):
+def foto(consulta: str, plato: str = "", version: int = 13):
     """Busca la foto y, si hay clave de IA, la IA mira cada candidata y solo acepta la que es ese plato.
     Solo se guarda cuando SÍ hay foto; si no, se reintenta en una hora."""
     verificar = None
@@ -427,8 +427,7 @@ def resultados():
                                          if not i.basico_de_despensa))
     st.markdown(
         f'<div class="dp-banner"><div class="cero"><small>Gasto de hoy</small><b>$0.00</b></div>'
-        f'<div><small>Recetas sin comprar nada</small><b>{len(cero)}</b></div>'
-        f'<div><small>Ingredientes de tu refri que se usan</small><b>{usados} de {len(tiene)}</b></div></div>',
+        f'<div><small>Recetas sin comprar nada</small><b>{len(cero)}</b></div></div>',
         unsafe_allow_html=True)
     if cero:
         st.markdown('<p class="sz-seccion">✅ Con lo que tienes: no compras nada</p>', unsafe_allow_html=True)

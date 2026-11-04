@@ -285,9 +285,14 @@ def recetas_del_recetario(cliente, tiene, personas, tiempo, dieta, basicos, excl
         return []
     todo = list(tiene) + list(basicos)
     out = []
-    for r in cat.recetas:
+    nombres = [m.get("strMeal") for m in platos]
+    for j, r in enumerate(cat.recetas):
         r = n.limpiar_receta(r)
         r.plato_conocido = True
+        if r.busqueda_foto not in nombres and len(cat.recetas) == len(platos):
+            r.busqueda_foto = nombres[j]                         # la IA cambió el nombre: van en el mismo orden
+        if r.busqueda_foto in nombres:
+            r.busqueda_foto = "mealdb:" + r.busqueda_foto       # su foto es la del recetario
         if not r.ingredientes or not r.pasos or not n.cumple_dieta(r, dieta) or r.tiempo_minutos > tiempo + 15:
             continue
         r = revisar(r, todo)

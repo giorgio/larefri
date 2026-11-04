@@ -69,7 +69,7 @@ def _sin_foto_reciente() -> dict:
 
 
 @st.cache_data(ttl=7 * 86400, show_spinner=False, max_entries=500)
-def foto(consulta: str, plato: str = "", version: int = 14):
+def foto(consulta: str, plato: str = "", version: int = 15):
     """Busca la foto y, si hay clave de IA, la IA mira cada candidata y solo acepta la que es ese plato.
     Solo se guarda cuando SÍ hay foto; si no, se reintenta en una hora."""
     verificar = None

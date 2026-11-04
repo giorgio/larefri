@@ -245,10 +245,10 @@ def buscar_foto(consulta: str, clave_pexels: str | None = None, clave_unsplash: 
     candidatas = []
     if consulta.startswith("url:"):                    # receta del recetario: trae SU foto
         url, fuente, pagina = (consulta[4:].split("|") + ["", "", ""])[:3]
-        if url:
-            return {"url": url, "url_chica": url, "autor": fuente, "pagina": pagina, "licencia": "",
-                    "licencia_url": "", "fuente": fuente, "fuente_url": pagina}
-        return None
+        if url and (verificar is None or verificar(url) is not False):   # también se revisa: si muestra
+            return {"url": url, "url_chica": url, "autor": fuente, "pagina": pagina, "licencia": "",  # fideos y la
+                    "licencia_url": "", "fuente": fuente, "fuente_url": pagina}             # receta no, no sirve
+        return None                                     # sin foto: la IA la crea
     if consulta.startswith("mealdb:"):                 # receta sacada del recetario: su foto ES la de ese plato
         consulta = consulta[len("mealdb:"):]
         m = foto_mealdb(consulta)

@@ -319,7 +319,8 @@ def recetas_del_recetario(cliente, tiene, personas, tiempo, dieta, basicos, excl
         if not _mismos_ingredientes(r, original):
             print(f"[mealdb] descarto {r.nombre!r}: la IA le cambió los ingredientes", flush=True)
             continue                                             # la IA "adaptó" el plato: ya no es el real
-        r.busqueda_foto = "mealdb:" + r.busqueda_foto           # su foto es la del recetario
+        r.busqueda_foto = "url:" + "|".join([original.get("_foto") or "", original.get("_fuente") or "",
+                                              original.get("_pagina") or ""])   # su foto es la del recetario
         if not r.ingredientes or not r.pasos or not n.cumple_dieta(r, dieta) or r.tiempo_minutos > tiempo + 15:
             continue
         r = revisar(r, todo)

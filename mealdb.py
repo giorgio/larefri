@@ -90,8 +90,49 @@ def recetas_posibles(tiene: list[str], maximo: int = 6) -> list[dict]:
     with ThreadPoolExecutor(8) as ex:
         completos = [x[0] for x in ex.map(lambda i: _get("lookup.php", i=i), ids) if x]
     buenos = [m for m in completos if se_puede(m, tiene_en)]
+    for b in buenos:
+        b["_foto"], b["_fuente"], b["_pagina"] = b.get("strMealThumb"), "TheMealDB", "https://www.themealdb.com/"
     print(f"[mealdb] {tiene_en} -> {len(ids)} platos revisados, {len(buenos)} se pueden hacer", flush=True)
-    return buenos[:maximo]
+    otros = de_spoonacular(tiene_en) if len(buenos) < maximo else []
+    return (buenos + otros)[:maximo]
+
+
+# --- Spoonacular: búsqueda hecha para "recetas con estos ingredientes" (clave SPOONACULAR_API_KEY en Railway) ---
+SPOON = "https://api.spoonacular.com/recipes/"
+
+
+def de_spoonacular(tiene_en: list[str], numero: int = 12) -> list[dict]:
+    clave = os.environ.get("SPOONACULAR_API_KEY")
+    if not clave:
+        return []
+    try:
+        r = requests.get(SPOON + "findByIngredients", timeout=5, params={
+            "ingredients": ",".join(tiene_en), "number": numero, "ranking": 2, "ignorePantry": "true", "apiKey": clave})
+        lista = r.json() if r.status_code == 200 else []
+        ids = [str(x["id"]) for x in lista if x.get("missedIngredientCount", 1) == 0][:8]
+        if not ids:
+            print(f"[spoonacular] {r.status_code}: 0 recetas completas", flush=True)
+            return []
+        info = requests.get(SPOON + "informationBulk", timeout=6, params={"ids": ",".join(ids), "apiKey": clave})
+        datos = info.json() if info.status_code == 200 else []
+    except (requests.RequestException, ValueError) as e:
+        print(f"[spoonacular] error: {e}", flush=True)
+        return []
+    out = []
+    for d in datos:
+        m = {"strMeal": d.get("title"), "strArea": (d.get("cuisines") or ["Internacional"])[0],
+             "strCategory": (d.get("dishTypes") or [""])[0],
+             "strInstructions": " ".join(p.get("step", "") for b in (d.get("analyzedInstructions") or [])
+                                         for p in b.get("steps", [])) or (d.get("instructions") or ""),
+             "_foto": d.get("image"), "_fuente": "Spoonacular",
+             "_pagina": d.get("spoonacularSourceUrl") or d.get("sourceUrl") or "https://spoonacular.com/"}
+        for i, ing in enumerate((d.get("extendedIngredients") or [])[:20], 1):
+            m[f"strIngredient{i}"] = ing.get("name") or ""
+            m[f"strMeasure{i}"] = f'{ing.get("amount", "")} {ing.get("unit", "")}'.strip()
+        if m["strMeal"] and m["_foto"] and se_puede(m, tiene_en):
+            out.append(m)
+    print(f"[spoonacular] {len(ids)} revisadas, {len(out)} se pueden hacer", flush=True)
+    return out
 
 
 def texto_para_ia(m: dict) -> str:

@@ -26,7 +26,7 @@ import nucleo as n
 ICONO = os.path.join(os.path.dirname(os.path.abspath(__file__)), "icono.png")
 st.set_page_config(page_title="larefri.", page_icon=ICONO if os.path.exists(ICONO) else "🧊", layout="wide")
 
-ESPERA_ENTRE_CONSULTAS = 6
+ESPERA_ENTRE_CONSULTAS = 1
 POR_PAGINA = 6
 INICIALES = {"cero": [], "uno": [], "pedido": None, "personas": 2, "ultima_consulta": 0.0}
 for _k, _v in INICIALES.items():
@@ -139,8 +139,10 @@ def poner_fotos():
     def una(r):
         add_script_run_ctx(None, ctx)
         return _buscar_foto(r)
+    t0 = time.time()
     with ThreadPoolExecutor(6) as ex:
         fotos_ = list(ex.map(una, [r for _, r in pend]))
+    print(f"[tiempo] fotos: {time.time() - t0:.1f} s", flush=True)
     for (hueco, r), f in zip(pend, fotos_):
         with hueco.container():
             _pintar_foto(r, f)

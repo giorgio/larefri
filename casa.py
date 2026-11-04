@@ -221,9 +221,13 @@ def buscar_con_lo_que_hay(cliente, tiene: list[str], personas: int, tiempo: int,
         f_rec = ex.submit(lambda: [] if categoria else
                           recetas_del_recetario(cliente, tiene, personas, tiempo, dieta, basicos, excluir))
         f_ia = ex.submit(n.llamar_gemini, cliente, prompt, CatalogoCasa, razonamiento="minimal")
+        import time as _t
+        t0 = _t.time()
         cero = f_rec.result()
+        print(f"[tiempo] recetario: {_t.time() - t0:.1f} s", flush=True)
         try:
             cat, _ = f_ia.result()
+            print(f"[tiempo] IA: {_t.time() - t0:.1f} s", flush=True)
         except n.ErrorIA:
             if cero:
                 return cero, []
@@ -298,7 +302,8 @@ def recetas_del_recetario(cliente, tiene, personas, tiempo, dieta, basicos, excl
             return []
         prompt = PROMPT_MEALDB.format(personas=personas, tiene=", ".join(tiene),
                                       recetas="\n\n".join(mealdb.texto_para_ia(m) for m in platos))
-        cat, _ = n.llamar_gemini(cliente, prompt, CatalogoCasa, razonamiento="minimal")
+        cat, _ = n.llamar_gemini(cliente, prompt, CatalogoCasa, modelos=(n.MODELO_RESPALDO, n.MODELO_PRINCIPAL),
+                                 razonamiento="minimal")      # traducir es fácil: el modelo liviano es más rápido
     except Exception as e:  # noqa: BLE001  (si el recetario falla, la IA propone como siempre)
         print(f"[mealdb] no se pudo usar: {e}", flush=True)
         return []

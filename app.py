@@ -286,12 +286,8 @@ div:has(> .st-key-papel)::before { content:""; position:absolute; top:41px; left
 .st-key-papel [data-testid="stTextInput"] [data-baseweb="base-input"] { background:transparent !important; border:none !important; box-shadow:none !important; }
 .st-key-papel [data-testid="stTextInput"] { margin-top:.4rem; }
 .st-key-papel [data-testid="stMultiSelect"] { margin-top:.4rem; }
-.st-key-basicos button, .st-key-basicos button p { font-family:'Caveat', cursive !important; font-size:1.3rem !important; }
-.st-key-basicos button[aria-pressed="true"] { background:#FF7A1A !important; border-color:#EE6A12 !important; }
-.st-key-basicos button[aria-pressed="true"] p { color:#fff !important; }
-.st-key-basicos button[aria-pressed="true"] p::after { content:"  ✕"; font-family:sans-serif; font-size:.8rem; }
-.st-key-basicos button[aria-pressed="false"] { background:#F3EEEA !important; border-color:#E0D6CF !important; }
-.st-key-basicos button[aria-pressed="false"] p { color:#9A8B82 !important; text-decoration:line-through; }
+[data-testid="stExpander"] summary p { font-family:'Caveat', cursive !important; font-size:1.45rem !important;
+  font-weight:700 !important; color:#23396B !important; }
 .algo-mas { font-family:'Caveat', cursive; font-weight:700; font-size:1.5rem; color:#23396B; margin:.6rem 0 .1rem; }
 .st-key-papel [data-testid="stMultiSelect"] label p { font-family:'Caveat', cursive !important; font-weight:700;
   font-size:1.6rem !important; color:#E2571A !important; }

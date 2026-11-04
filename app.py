@@ -286,6 +286,12 @@ div:has(> .st-key-papel)::before { content:""; position:absolute; top:41px; left
 .st-key-papel [data-testid="stTextInput"] [data-baseweb="base-input"] { background:transparent !important; border:none !important; box-shadow:none !important; }
 .st-key-papel [data-testid="stTextInput"] { margin-top:.4rem; }
 .st-key-papel [data-testid="stMultiSelect"] { margin-top:.4rem; }
+.st-key-basicos button, .st-key-basicos button p { font-family:'Caveat', cursive !important; font-size:1.3rem !important; }
+.st-key-basicos button[aria-pressed="true"] { background:#FF7A1A !important; border-color:#EE6A12 !important; }
+.st-key-basicos button[aria-pressed="true"] p { color:#fff !important; }
+.st-key-basicos button[aria-pressed="true"] p::after { content:"  ✕"; font-family:sans-serif; font-size:.8rem; }
+.st-key-basicos button[aria-pressed="false"] { background:#F3EEEA !important; border-color:#E0D6CF !important; }
+.st-key-basicos button[aria-pressed="false"] p { color:#9A8B82 !important; text-decoration:line-through; }
 .algo-mas { font-family:'Caveat', cursive; font-weight:700; font-size:1.5rem; color:#23396B; margin:.6rem 0 .1rem; }
 .st-key-papel [data-testid="stMultiSelect"] label p { font-family:'Caveat', cursive !important; font-weight:700;
   font-size:1.6rem !important; color:#E2571A !important; }
@@ -493,7 +499,7 @@ def formulario():
         with st.expander("Básicos de cocina que tienes (sal, aceite, especias…)"):
             st.pills("Básicos", c.BASICOS, selection_mode="multi", default=c.BASICOS, key="basicos",
                      label_visibility="collapsed")
-            st.caption("La sal y el agua siempre se asumen.")
+            st.caption("Toca un básico para apagarlo si no lo tienes. La sal y el agua siempre se asumen.")
         with st.container(key="notas"):
             a, b, f = st.columns(3, gap="medium")
             a.number_input("Personas", 1, 12, 2, key="personas_in")

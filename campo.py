@@ -8,11 +8,11 @@ import streamlit as st
 CSS = """
 .caja { display:flex; flex-wrap:wrap; align-items:center; gap:.4rem; padding:.45rem .6rem; min-height:2.9rem;
   background:transparent; border:none; border-bottom:2px solid #9DB7D5; font-family:'Caveat', cursive; }
-.chip { display:inline-flex; align-items:center; gap:.35rem; padding:.05rem .55rem; border:2px solid #14A3A0;
-  border-radius:.45rem; background:#E3F6F5; color:#23396B; font-size:1.35rem; line-height:1.5;
+.chip { display:inline-flex; align-items:center; gap:.4rem; padding:.05rem .65rem; border:2px solid #EE6A12;
+  border-radius:999px; background:#FF7A1A; color:#fff; font-size:1.35rem; line-height:1.5;
   animation: entra .25s ease-out; }
-.chip button { all:unset; cursor:pointer; color:#0B6F6C; font-size:1rem; line-height:1; padding:0 .1rem; font-family:sans-serif; }
-.chip button:hover { color:#E2552B; }
+.chip button { all:unset; cursor:pointer; color:#fff; font-size:.95rem; line-height:1; padding:0 .1rem; font-family:sans-serif; opacity:.9; }
+.chip button:hover { opacity:1; transform:scale(1.15); }
 .escribe { position:relative; flex:1 1 9rem; min-width:9rem; }
 .escribe input, .escribe .fantasma { font-family:'Caveat', cursive; font-size:1.45rem; color:#23396B;
   padding:0; margin:0; border:none; outline:none; background:transparent; width:100%; letter-spacing:normal; }

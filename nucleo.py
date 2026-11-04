@@ -307,6 +307,8 @@ def presentacion_real(i: Ingrediente) -> Ingrediente:
 
 # Nombres de otros países -> como se dice en Ecuador (por si la IA se equivoca)
 ECUADOR = [
+    (r"\bsalteñad([oa]s?)\b", r"saltead\1"), (r"\bsalteñar\b", "saltear"),
+    (r"\bcalabacín(es)?\b", r"zucchini"),
     (r"\barroz patrio\b", "arroz blanco"), (r"\bhogao\b", "refrito"), (r"\bfrijol(es)?\b", r"fréjol\1"),
     (r"\bfríjol(es)?\b", r"fréjol\1"), (r"\bpaltas?\b", "aguacate"), (r"\belotes?\b", "choclo"),
     (r"\bejotes?\b", "vainitas"), (r"\bchícharos?\b", "arveja"), (r"\bjitomates?\b", "tomate riñón"),

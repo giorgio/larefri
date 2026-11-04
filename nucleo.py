@@ -431,7 +431,7 @@ def _codigo(e: Exception) -> int | None:
     return getattr(e, "code", None) or getattr(e, "status_code", None)
 
 
-def llamar_gemini(cliente, prompt: str, esquema, modelos=(MODELO_PRINCIPAL, MODELO_RESPALDO), reintentos: int = 1,
+def llamar_gemini(cliente, prompt: str, esquema, modelos=(MODELO_PRINCIPAL, MODELO_RESPALDO), reintentos: int = 2,
                   razonamiento: str = "low"):
     from google.genai import types
 
@@ -469,7 +469,7 @@ def llamar_gemini(cliente, prompt: str, esquema, modelos=(MODELO_PRINCIPAL, MODE
                 if codigo in (404, 429):
                     break
                 if intento < reintentos:
-                    time.sleep(2)
+                    time.sleep(3)
                     continue
                 break
     codigo = _codigo(ultimo_error) if ultimo_error else None

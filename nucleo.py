@@ -485,6 +485,8 @@ una persona lo reconocería como ese plato? Responde NO si muestra otro plato (p
 ingredientes crudos o sueltos, personas o lugares como tema principal, o si no se ve bien la comida.
 Sé ESTRICTO con la forma: si el nombre dice desgranado, picado, en crema, sopa, puré, frito, relleno, etc., la foto
 debe mostrarlo así (un choclo entero NO sirve para "choclo desgranado"; un pollo asado NO sirve para una crema).
+Responde NO también si en la foto se ven ingredientes importantes que NO están en la lista del plato (por ejemplo
+papas, aguacate o fréjoles cuando el plato no los lleva).
 Responde solo SI o NO."""
 
 

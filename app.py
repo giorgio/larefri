@@ -69,7 +69,7 @@ def _sin_foto_reciente() -> dict:
 
 
 @st.cache_data(ttl=7 * 86400, show_spinner=False, max_entries=500)
-def foto(consulta: str, plato: str = "", version: int = 13):
+def foto(consulta: str, plato: str = "", version: int = 14):
     """Busca la foto y, si hay clave de IA, la IA mira cada candidata y solo acepta la que es ese plato.
     Solo se guarda cuando SÍ hay foto; si no, se reintenta en una hora."""
     verificar = None
@@ -96,7 +96,8 @@ def _buscar_foto(r):
     if time.time() - malas.get(r.busqueda_foto, 0) <= 3600:
         return None
     try:
-        return foto(r.busqueda_foto, r.nombre)
+        return foto(r.busqueda_foto, f"{r.nombre} — lleva SOLO: "
+                    + ", ".join(i.nombre for i in r.ingredientes if not i.basico_de_despensa))
     except Exception as e:  # noqa: BLE001
         print(f"[foto] sin foto para {r.nombre!r}: {type(e).__name__} {e}", flush=True)
         malas[r.busqueda_foto] = time.time()

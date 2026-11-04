@@ -483,6 +483,8 @@ def llamar_gemini(cliente, prompt: str, esquema, modelos=(MODELO_PRINCIPAL, MODE
 PROMPT_FOTO = """Mira la foto. ¿Muestra el plato "{plato}" ({busqueda}) YA PREPARADO Y SERVIDO, de forma que
 una persona lo reconocería como ese plato? Responde NO si muestra otro plato (por ejemplo fideos en vez de arroz),
 ingredientes crudos o sueltos, personas o lugares como tema principal, o si no se ve bien la comida.
+Sé ESTRICTO con la forma: si el nombre dice desgranado, picado, en crema, sopa, puré, frito, relleno, etc., la foto
+debe mostrarlo así (un choclo entero NO sirve para "choclo desgranado"; un pollo asado NO sirve para una crema).
 Responde solo SI o NO."""
 
 

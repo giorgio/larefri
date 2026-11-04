@@ -1,14 +1,14 @@
 [theme]
 base = "light"
-primaryColor = "#EE6A12"
-backgroundColor = "#F7F4F1"
-secondaryBackgroundColor = "#FFE9D6"
-textColor = "#2A1F1A"
-linkColor = "#D15A0A"
+primaryColor = "#123FD0"
+backgroundColor = "#FFF0F6"
+secondaryBackgroundColor = "#FFF5BB"
+textColor = "#19234C"
+linkColor = "#123FD0"
 borderColor = "#EADFD8"
 showWidgetBorder = true
 font = "DM Sans:https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&display=swap"
 baseRadius = "0.75rem"
 buttonRadius = "0.7rem"
 headingFontWeights = [700, 700, 700, 700]
-dataframeHeaderBackgroundColor = "#F7F4F1"
+dataframeHeaderBackgroundColor = "#FFF0F6"

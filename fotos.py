@@ -244,10 +244,8 @@ def buscar_foto(consulta: str, clave_pexels: str | None = None, clave_unsplash: 
         return None
     candidatas = []
     m = foto_mealdb(consulta)                          # primero el recetario real (su foto ES de ese plato)
-    if m:
-        ok = True if verificar is None else verificar(m["url_chica"])
-        if ok is not False:
-            return m
+    if m:                                              # es la foto de ese mismo plato: no gasta IA revisándola
+        return m
     if clave_unsplash:
         candidatas += candidatos_unsplash(consulta, clave_unsplash)
     if clave_pexels:

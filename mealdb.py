@@ -36,7 +36,7 @@ def _clave() -> str:
 
 def _get(ruta: str, **params):
     try:
-        r = requests.get(BASE.format(clave=_clave()) + ruta, params=params, timeout=5)
+        r = requests.get(BASE.format(clave=_clave()) + ruta, params=params, timeout=3)
         return (r.json() or {}).get("meals") or [] if r.status_code == 200 else []
     except (requests.RequestException, ValueError):
         return []
@@ -86,7 +86,7 @@ def recetas_posibles(tiene: list[str], maximo: int = 6) -> list[dict]:
     principales = [x for x in tiene_en if x not in ("garlic", "onion", "salt", "lemon", "lime", "pepper")][:6]
     with ThreadPoolExecutor(6) as ex:
         listas = list(ex.map(lambda i: _get("filter.php", i=i.replace(" ", "_")), principales or tiene_en[:3]))
-    ids = list(dict.fromkeys(m["idMeal"] for lista in listas for m in lista[:25] if m.get("idMeal")))[:60]
+    ids = list(dict.fromkeys(m["idMeal"] for lista in listas for m in lista[:12] if m.get("idMeal")))[:30]
     with ThreadPoolExecutor(8) as ex:
         completos = [x[0] for x in ex.map(lambda i: _get("lookup.php", i=i), ids) if x]
     buenos = [m for m in completos if se_puede(m, tiene_en)]

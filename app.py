@@ -142,14 +142,14 @@ def sello_falta(r) -> str:
 
 ESPERA_HTML = """<div class="dp-espera">
 <svg width="92" height="92" viewBox="0 0 48 48" aria-hidden="true">
- <rect width="48" height="48" rx="12" fill="#FF7A1A"/>
+ <rect class="dp-color" width="48" height="48" rx="12" fill="#FF7A1A"/>
  <g fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
   <path d="M18 12 H30 Q35 12 35 17 V37 Q35 42 30 42 H18 Q13 42 13 37 V17 Q13 12 18 12 Z" opacity=".35"/>
   <path d="M15.5 27 H32.5 M15.5 33 H32.5" opacity=".35"/>
   <g class="dp-puerta"><path d="M18 12 H30 Q35 12 35 17 V37 Q35 42 30 42 H18 Q13 42 13 37 V17 Q13 12 18 12 Z M13 23 H35 M18 16 V19 M18 27 V33"/></g>
   <path class="dp-hoja" d="M24 12 C24 7 28 4 33 4 C33 9 29 12 24 12 Z"/>
  </g></svg>
-<p>Abriendo la refri y pensando qué cocinar…</p></div>"""
+</div>"""
 
 ESTILOS = """<style>
 @import url('https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&display=swap');
@@ -270,7 +270,9 @@ div:has(> .st-key-papel)::before { animation:dp-clac 1.1s ease-out both; }
   background:linear-gradient(#0E9C98, #0E9C98) left bottom / 100% 2.5px no-repeat; padding-bottom:5px;
   animation:dp-salto .3s ease-out, dp-trazo .16s ease-in .05s both; }
 .dp-espera { display:flex; flex-direction:column; align-items:center; gap:.6rem; padding:0; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); z-index:999; background:transparent; }
-.dp-espera p { font-family:'Caveat', cursive; font-size:1.6rem; color:#E2571A; margin:0; }
+.dp-espera p { display:none; }
+.dp-espera .dp-color { animation:dp-colores 3s linear infinite; }
+@keyframes dp-colores { 0% { fill:#FF7A1A; } 25% { fill:#14A3A0; } 50% { fill:#F4B400; } 75% { fill:#E2552B; } 100% { fill:#FF7A1A; } }
 @keyframes dp-abrir { 0%, 15% { transform:scaleX(1); } 45%, 60% { transform:scaleX(-.25); } 90%, 100% { transform:scaleX(1); } }
 @keyframes dp-hoja { 0%, 100% { transform:rotate(0); } 50% { transform:rotate(-14deg); } }
 .dp-puerta { transform-origin:13px 27px; animation:dp-abrir 1.6s ease-in-out infinite; }

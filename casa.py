@@ -84,9 +84,10 @@ BÁSICOS DE DESPENSA (puedes usarlos sin que cuenten como compra): {basicos}
 {dieta}{categoria}
 REGLAS
 1. PROHIBIDO usar ingredientes que no estén en su lista ni en los básicos. {faltante}
-2. SOLO PLATOS QUE EXISTEN DE VERDAD y que la gente reconoce por su nombre (de Ecuador u otro país):
-   p. ej. tortilla de papa, arroz con huevo frito, menestra de lenteja, sopa de fideo, sanduche de queso,
-   huevos revueltos con tomate. PROHIBIDO inventar platos o nombres creativos o con adjetivos
+2. SOLO PLATOS QUE EXISTEN DE VERDAD y que la gente reconoce por su nombre, de TODO EL MUNDO y SIN dar
+   prioridad a la cocina ecuatoriana: varía países (asiática, italiana, mexicana, peruana, india, española,
+   árabe, etc.). P. ej. arroz frito con huevo, tortilla española, shakshuka, pasta aglio e olio, huevos
+   rancheros, dal de lenteja, sopa de fideo. PROHIBIDO inventar platos o nombres creativos o con adjetivos
    ("express", "saludable", "delicia", "bowl", "fusión"). No hace falta usar todo:
    elige solo los ingredientes que ese plato lleva. Si con lo que hay no sale un plato conocido, propón menos
    recetas (aunque sea una o dos) en vez de inventar.

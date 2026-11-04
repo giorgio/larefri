@@ -502,5 +502,8 @@ d.cabecera(ir)
 formulario()
 resultados()
 st.divider()
+if os.environ.get("EDAMAM_APP_ID"):
+    st.markdown('<div style="text-align:center;font-size:.8rem;color:#7A6A61">Recetas: TheMealDB · Spoonacular · '
+                '<a href="https://www.edamam.com/" target="_blank">Powered by Edamam</a></div>', unsafe_allow_html=True)
 st.caption("larefri. · hermana de canastas. y sazona. · IA: Google Gemini · Fotos: "
            "[Unsplash](https://unsplash.com/?utm_source=larefri&utm_medium=referral) / [Wikimedia Commons](https://commons.wikimedia.org) · Precios y valores nutricionales aproximados.")

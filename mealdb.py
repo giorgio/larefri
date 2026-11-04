@@ -94,7 +94,42 @@ def recetas_posibles(tiene: list[str], maximo: int = 6) -> list[dict]:
         b["_foto"], b["_fuente"], b["_pagina"] = b.get("strMealThumb"), "TheMealDB", "https://www.themealdb.com/"
     print(f"[mealdb] {tiene_en} -> {len(ids)} platos revisados, {len(buenos)} se pueden hacer", flush=True)
     otros = de_spoonacular(tiene_en) if len(buenos) < maximo else []
+    if len(buenos) + len(otros) < maximo:
+        otros += de_edamam(tiene_en)
     return (buenos + otros)[:maximo]
+
+
+# --- Edamam: millones de recetas de webs de cocina (EDAMAM_APP_ID y EDAMAM_APP_KEY en Railway) ---
+def de_edamam(tiene_en: list[str]) -> list[dict]:
+    app_id, app_key = os.environ.get("EDAMAM_APP_ID"), os.environ.get("EDAMAM_APP_KEY")
+    if not (app_id and app_key):
+        return []
+    principales = [x for x in tiene_en if x not in ("garlic", "onion", "lemon", "lime")][:3] or tiene_en[:2]
+    try:
+        r = requests.get("https://api.edamam.com/api/recipes/v2", timeout=6,
+                         headers={"Edamam-Account-User": "larefri"},
+                         params={"type": "public", "q": " ".join(principales), "app_id": app_id, "app_key": app_key})
+        hits = (r.json() or {}).get("hits") or [] if r.status_code == 200 else []
+        if r.status_code != 200:
+            print(f"[edamam] respondió {r.status_code}: {r.text[:200]}", flush=True)
+    except (requests.RequestException, ValueError) as e:
+        print(f"[edamam] error: {e}", flush=True)
+        return []
+    out = []
+    for h in hits[:20]:
+        d = h.get("recipe") or {}
+        m = {"strMeal": d.get("label"), "strArea": (d.get("cuisineType") or ["Internacional"])[0].title(),
+             "strCategory": (d.get("dishType") or [""])[0],
+             "strInstructions": "(sin pasos: escríbelos tú, cortos y fieles a estos ingredientes)",
+             "_foto": ((d.get("images") or {}).get("REGULAR") or {}).get("url") or d.get("image"),
+             "_fuente": "Edamam", "_pagina": d.get("url") or "https://www.edamam.com/"}
+        for i, ing in enumerate((d.get("ingredients") or [])[:20], 1):
+            m[f"strIngredient{i}"] = ing.get("food") or ""
+            m[f"strMeasure{i}"] = f'{ing.get("quantity") or ""} {ing.get("measure") or ""}'.replace("<unit>", "").strip()
+        if m["strMeal"] and m["_foto"] and se_puede(m, tiene_en):
+            out.append(m)
+    print(f"[edamam] {len(hits)} revisadas, {len(out)} se pueden hacer", flush=True)
+    return out[:6]
 
 
 # --- Spoonacular: búsqueda hecha para "recetas con estos ingredientes" (clave SPOONACULAR_API_KEY en Railway) ---

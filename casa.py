@@ -201,3 +201,17 @@ def buscar_con_lo_que_hay(cliente, tiene: list[str], personas: int, tiempo: int,
 
 
 SUGERENCIAS = _sin_variantes(TODOS)      # lo que se ofrece en "¿Algo más?" (sin repetir el arroz, el tomate...)
+
+
+# Lo que cuesta COCINAR (aprox., Ecuador): gas subsidiado, luz de inducción y el valor de tu tiempo
+GAS_POR_HORA = 2.50 / 15 * 0.2        # tanque de 15 kg ≈ $2,50; un quemador gasta ≈ 0,2 kg por hora
+LUZ_POR_HORA = 1.5 * 0.092            # cocina de inducción ≈ 1,5 kW; luz ≈ $0,092 el kWh
+HORA_DE_TRABAJO = 470 / 160           # salario básico ≈ $470 al mes / 160 horas
+
+
+def costo_cocinar(minutos: int) -> dict:
+    """{'gas','luz','tiempo'} en dólares. El fuego se cuenta como el 70 % del tiempo total."""
+    fuego = max(minutos, 0) * 0.7 / 60
+    return {"gas": round(fuego * GAS_POR_HORA, 2), "luz": round(fuego * LUZ_POR_HORA, 2),
+            "tiempo": round(max(minutos, 0) / 60 * HORA_DE_TRABAJO, 2)}
+

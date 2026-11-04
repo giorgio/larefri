@@ -1,0 +1,100 @@
+"""Recetas REALES de TheMealDB (cada una con su foto) que se pueden hacer solo con lo que hay en casa.
+Clave gratis de prueba "1" (uso educativo); con la de supporter se pone MEALDB_API_KEY en Railway."""
+
+from __future__ import annotations
+
+import os
+import re
+from concurrent.futures import ThreadPoolExecutor
+
+import requests
+
+BASE = "https://www.themealdb.com/api/json/v1/{clave}/"
+
+# español -> nombres de ingredientes en TheMealDB (para filtrar)
+INGLES = {
+    "arroz": ["rice"], "huevo": ["egg"], "papa": ["potato"], "maduro": ["plantain"], "verde": ["plantain"],
+    "yuca": ["cassava"], "fideo": ["spaghetti", "pasta", "noodles"], "atun": ["tuna"], "pollo": ["chicken"],
+    "carne molida": ["minced beef", "beef mince", "ground beef"], "carne": ["beef"], "lenteja": ["lentils"],
+    "frejol": ["kidney beans", "beans"], "choclo": ["sweetcorn", "corn"], "queso": ["cheese", "cheddar", "parmesan"],
+    "leche": ["milk"], "tomate": ["tomato"], "pimiento": ["pepper"], "zanahoria": ["carrot"], "cebolla": ["onion"],
+    "ajo": ["garlic"], "limon": ["lemon", "lime"], "aguacate": ["avocado"], "pan": ["bread"], "avena": ["oats"],
+    "platano": ["banana"], "sardina": ["sardines"], "salchicha": ["sausage"], "arveja": ["peas"],
+    "mantequilla": ["butter"], "harina": ["flour", "plain flour"], "cerdo": ["pork"], "pescado": ["fish"],
+    "camaron": ["prawns", "shrimp"], "espinaca": ["spinach"], "brocoli": ["broccoli"], "col": ["cabbage"],
+    "pepino": ["cucumber"], "mani": ["peanut"], "coco": ["coconut"], "yogur": ["yogurt"], "crema": ["cream"],
+}
+# lo que se asume en cualquier cocina
+BASICOS_EN = ["salt", "pepper", "black pepper", "water", "oil", "olive oil", "vegetable oil", "sunflower oil",
+              "sugar", "vinegar", "cumin", "oregano", "paprika", "bay leaf", "bay leaves", "cinnamon",
+              "stock cube", "chicken stock", "vegetable stock", "garlic powder", "ice"]
+
+
+def _clave() -> str:
+    return os.environ.get("MEALDB_API_KEY") or "1"
+
+
+def _get(ruta: str, **params):
+    try:
+        r = requests.get(BASE.format(clave=_clave()) + ruta, params=params, timeout=5)
+        return (r.json() or {}).get("meals") or [] if r.status_code == 200 else []
+    except (requests.RequestException, ValueError):
+        return []
+
+
+def _norm(t: str) -> str:
+    t = (t or "").lower()
+    for a, b in zip("áéíóúñ", "aeioun"):
+        t = t.replace(a, b)
+    return re.sub(r"s\b", "", t).strip()
+
+
+def a_ingles(tiene: list[str]) -> list[str]:
+    out = []
+    for x in tiene:
+        k = _norm(x)
+        for es, en in INGLES.items():
+            if es == k or k.startswith(es + " ") or es in k.split():
+                out += en
+                break
+    return list(dict.fromkeys(out))
+
+
+def ingredientes(m: dict) -> list[tuple[str, str]]:
+    return [((m.get(f"strIngredient{i}") or "").strip(), (m.get(f"strMeasure{i}") or "").strip())
+            for i in range(1, 21) if (m.get(f"strIngredient{i}") or "").strip()]
+
+
+def se_puede(m: dict, tiene_en: list[str]) -> bool:
+    """¿TODOS los ingredientes del plato están en casa (o son básicos)?"""
+    ok = [_norm(x) for x in tiene_en]
+    basicos = {_norm(x) for x in BASICOS_EN}
+    for nombre, _ in ingredientes(m):
+        k = _norm(nombre)
+        if k in basicos:
+            continue
+        if not any(o == k or o in k.split() or (len(o) > 4 and o in k) for o in ok):
+            return False
+    return True
+
+
+def recetas_posibles(tiene: list[str], maximo: int = 6) -> list[dict]:
+    """Platos de TheMealDB que salen completos con lo que hay. Busca por los ingredientes principales."""
+    tiene_en = a_ingles(tiene)
+    if not tiene_en:
+        return []
+    principales = [x for x in tiene_en if x not in ("garlic", "onion", "salt", "lemon", "lime", "pepper")][:6]
+    with ThreadPoolExecutor(6) as ex:
+        listas = list(ex.map(lambda i: _get("filter.php", i=i.replace(" ", "_")), principales or tiene_en[:3]))
+    ids = list(dict.fromkeys(m["idMeal"] for lista in listas for m in lista[:25] if m.get("idMeal")))[:60]
+    with ThreadPoolExecutor(8) as ex:
+        completos = [x[0] for x in ex.map(lambda i: _get("lookup.php", i=i), ids) if x]
+    buenos = [m for m in completos if se_puede(m, tiene_en)]
+    print(f"[mealdb] {tiene_en} -> {len(ids)} platos revisados, {len(buenos)} se pueden hacer", flush=True)
+    return buenos[:maximo]
+
+
+def texto_para_ia(m: dict) -> str:
+    ings = "; ".join(f"{q} {n}".strip() for n, q in ingredientes(m))
+    return (f"### {m.get('strMeal')} ({m.get('strArea')}, {m.get('strCategory')})\n"
+            f"Ingredientes: {ings}\nPreparación: {(m.get('strInstructions') or '')[:1500]}")

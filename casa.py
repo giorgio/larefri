@@ -179,11 +179,21 @@ def buscar_con_lo_que_hay(cliente, tiene: list[str], personas: int, tiempo: int,
         categoria=(f"- Tipo de plato: {categoria}.\n") if categoria else "",
         faltante=UN_FALTANTE if permitir_faltante else SIN_FALTANTES,
     )
+    todo = list(tiene) + basicos
+    cero = [] if categoria else recetas_del_recetario(cliente, tiene, personas, tiempo, dieta, basicos, excluir)
+    uno = []
+    excluir = list(excluir) + [r.nombre for r in cero]
+    if len(cero) >= cantidad:
+        return cero[:cantidad], uno
+    prompt = prompt.replace(f"Propón {cantidad} recetas", f"Propón {cantidad - len(cero)} recetas")
     if excluir:
         prompt += "\nNo repitas estas recetas: " + ", ".join(excluir)
-    cat, _ = n.llamar_gemini(cliente, prompt, CatalogoCasa, razonamiento="minimal")
-    todo = list(tiene) + basicos
-    cero, uno = [], []
+    try:
+        cat, _ = n.llamar_gemini(cliente, prompt, CatalogoCasa, razonamiento="minimal")
+    except n.ErrorIA:
+        if cero:
+            return cero, uno
+        raise
     for r in cat.recetas:
         r = n.limpiar_receta(r)
         if not r.ingredientes or not r.pasos or not n.cumple_dieta(r, dieta) or not r.plato_conocido \
@@ -199,6 +209,46 @@ def buscar_con_lo_que_hay(cliente, tiene: list[str], personas: int, tiempo: int,
         raise n.ErrorIA("Con esos ingredientes no salió ninguna receta sin comprar nada. "
                         "Agrega uno o dos ingredientes más que tengas y vuelve a buscar.")
     return cero, sorted(uno, key=costo_faltantes)
+
+
+PROMPT_MEALDB = """Estas son recetas REALES de un recetario (TheMealDB). Conviértelas al formato pedido, en español
+de Ecuador. NO cambies el plato ni agregues ingredientes: usa solo los que trae cada una.
+- nombre: el nombre conocido del plato en español (si no tiene traducción conocida, el original).
+- busqueda_foto: EXACTAMENTE el nombre original en inglés que va después de ###.
+- plato_conocido = true. Cantidades para {personas} personas, en números enteros cuando son unidades.
+- Pasos cortos (máximo 8) para alguien que cocina poco. Estima tiempo, calorías y proteína.
+- Para cada ingrediente: presentación en que se vende en Ecuador, precio estimado y fraccion_usada.
+  Marca sal, pimienta, aceite, agua y especias como basico_de_despensa; de_tu_casa = true en todos.
+LO QUE TIENE EN CASA: {tiene}
+
+{recetas}"""
+
+
+def recetas_del_recetario(cliente, tiene, personas, tiempo, dieta, basicos, excluir=()):
+    """Platos reales de TheMealDB que salen con lo que hay, traducidos por la IA. [] si no hay o falla."""
+    try:
+        import mealdb
+        platos = [m for m in mealdb.recetas_posibles(tiene) if m.get("strMeal") not in excluir]
+        if not platos:
+            return []
+        prompt = PROMPT_MEALDB.format(personas=personas, tiene=", ".join(tiene),
+                                      recetas="\n\n".join(mealdb.texto_para_ia(m) for m in platos))
+        cat, _ = n.llamar_gemini(cliente, prompt, CatalogoCasa, razonamiento="minimal")
+    except Exception as e:  # noqa: BLE001  (si el recetario falla, la IA propone como siempre)
+        print(f"[mealdb] no se pudo usar: {e}", flush=True)
+        return []
+    todo = list(tiene) + list(basicos)
+    out = []
+    for r in cat.recetas:
+        r = n.limpiar_receta(r)
+        r.plato_conocido = True
+        if not r.ingredientes or not r.pasos or not n.cumple_dieta(r, dieta) or r.tiempo_minutos > tiempo + 15:
+            continue
+        r = revisar(r, todo)
+        if not faltantes(r, todo):
+            out.append(r)
+    print(f"[mealdb] {len(out)} recetas del recetario", flush=True)
+    return out
 
 
 SUGERENCIAS = _sin_variantes(TODOS)      # lo que se ofrece en "¿Algo más?" (sin repetir el arroz, el tomate...)

@@ -16,7 +16,7 @@ INGLES = {
     "arroz": ["rice"], "huevo": ["egg"], "papa": ["potato"], "maduro": ["plantain"], "verde": [],
     "yuca": ["cassava"], "fideo": ["spaghetti", "pasta", "noodles"], "atun": ["tuna"], "pollo": ["chicken"],
     "carne molida": ["minced beef", "beef mince", "ground beef"], "carne": ["beef"], "lenteja": ["lentils"],
-    "frejol": ["kidney beans", "beans"], "choclo": ["sweetcorn", "corn"], "queso": ["cheese", "cheddar", "parmesan"],
+    "frejol": ["kidney beans", "black beans", "pinto beans", "red beans"], "choclo": ["sweetcorn", "corn"], "queso": ["cheese", "cheddar", "parmesan"],
     "leche": ["milk"], "tomate": ["tomato"], "pimiento": ["pepper"], "zanahoria": ["carrot"], "cebolla": ["onion"],
     "ajo": ["garlic"], "limon": ["lemon", "lime"], "aguacate": ["avocado"], "pan": ["bread"], "avena": ["oats"],
     "platano": ["banana"], "sardina": ["sardines"], "salchicha": ["sausage"], "arveja": ["peas"],

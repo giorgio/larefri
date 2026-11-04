@@ -84,7 +84,8 @@ BÁSICOS DE DESPENSA (puedes usarlos sin que cuenten como compra): {basicos}
 {dieta}{categoria}
 REGLAS
 1. PROHIBIDO usar ingredientes que no estén en su lista ni en los básicos. {faltante}
-   OJO: «Maduro» (plátano maduro) y «Verde» (plátano verde) son ingredientes DISTINTOS: no uses uno por el otro.
+   NUNCA sustituyas un ingrediente por otro parecido: maduro ≠ verde, fréjol ≠ lenteja ≠ arveja ≠ garbanzo,
+   queso ≠ leche, pollo ≠ carne, fideo ≠ arroz. Usa EXACTAMENTE lo que tiene.
 2. SOLO PLATOS QUE EXISTEN DE VERDAD y que la gente reconoce por su nombre, de TODO EL MUNDO y SIN dar
    prioridad a la cocina ecuatoriana: varía países (asiática, italiana, mexicana, peruana, india, española,
    árabe, etc.). P. ej. arroz frito con huevo, tortilla española, shakshuka, pasta aglio e olio, huevos
@@ -145,7 +146,7 @@ def lo_tiene(nombre_ingrediente: str, tiene: list[str]) -> bool:
     return False
 
 
-_EXCLUYENTES = [{"madur", "verd"}]      # plátano maduro NO es verde (y viceversa)
+_EXCLUYENTES = [{"madur", "verd"}, {"frejol", "lentej", "arvej", "garbanz", "habas"}]      # plátano maduro NO es verde (y viceversa)
 
 
 def _distintos(a: set[str], b: set[str]) -> bool:

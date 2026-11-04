@@ -220,7 +220,8 @@ def buscar_con_lo_que_hay(cliente, tiene: list[str], personas: int, tiempo: int,
     with ThreadPoolExecutor(2) as ex:
         f_rec = ex.submit(lambda: [] if categoria else
                           recetas_del_recetario(cliente, tiene, personas, tiempo, dieta, basicos, excluir))
-        f_ia = ex.submit(n.llamar_gemini, cliente, prompt, CatalogoCasa, razonamiento="minimal")
+        f_ia = ex.submit(n.llamar_gemini, cliente, prompt, CatalogoCasa, razonamiento="minimal",
+                         modelos=(n.MODELO_RESPALDO, n.MODELO_PRINCIPAL))    # el liviano responde mucho más rápido
         import time as _t
         t0 = _t.time()
         cero = f_rec.result()
@@ -297,7 +298,7 @@ def recetas_del_recetario(cliente, tiene, personas, tiempo, dieta, basicos, excl
     """Platos reales de TheMealDB que salen con lo que hay, traducidos por la IA. [] si no hay o falla."""
     try:
         import mealdb
-        platos = [m for m in mealdb.recetas_posibles(tiene) if m.get("strMeal") not in excluir]
+        platos = [m for m in mealdb.recetas_posibles(tiene, maximo=4) if m.get("strMeal") not in excluir]
         if not platos:
             return []
         prompt = PROMPT_MEALDB.format(personas=personas, tiene=", ".join(tiene),

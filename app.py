@@ -69,7 +69,7 @@ def _sin_foto_reciente() -> dict:
 
 
 @st.cache_data(ttl=7 * 86400, show_spinner=False, max_entries=500)
-def foto(consulta: str, plato: str = "", version: int = 7):
+def foto(consulta: str, plato: str = "", version: int = 8):
     """Busca la foto y, si hay clave de IA, la IA mira cada candidata y solo acepta la que es ese plato.
     Solo se guarda cuando SÍ hay foto; si no, se reintenta en una hora."""
     verificar = None
@@ -84,7 +84,7 @@ def foto(consulta: str, plato: str = "", version: int = 7):
             try:
                 return n.foto_coincide(cliente, img, plato or consulta, consulta)
             except n.ErrorIA:
-                return False
+                return None          # no se pudo revisar: fotos.py decide por el título
     f = fotos.buscar_foto(consulta, secreto("PEXELS_API_KEY"), secreto("UNSPLASH_ACCESS_KEY"), verificar)
     if not f:
         raise SinFoto(consulta)

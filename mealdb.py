@@ -13,7 +13,7 @@ BASE = "https://www.themealdb.com/api/json/v1/{clave}/"
 
 # español -> nombres de ingredientes en TheMealDB (para filtrar)
 INGLES = {
-    "arroz": ["rice"], "huevo": ["egg"], "papa": ["potato"], "maduro": ["plantain"], "verde": ["plantain"],
+    "arroz": ["rice"], "huevo": ["egg"], "papa": ["potato"], "maduro": ["plantain"], "verde": [],
     "yuca": ["cassava"], "fideo": ["spaghetti", "pasta", "noodles"], "atun": ["tuna"], "pollo": ["chicken"],
     "carne molida": ["minced beef", "beef mince", "ground beef"], "carne": ["beef"], "lenteja": ["lentils"],
     "frejol": ["kidney beans", "beans"], "choclo": ["sweetcorn", "corn"], "queso": ["cheese", "cheddar", "parmesan"],

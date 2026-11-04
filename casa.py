@@ -207,7 +207,7 @@ def buscar_con_lo_que_hay(cliente, tiene: list[str], personas: int, tiempo: int,
     if not tiene:
         raise n.ErrorIA("Escribe o elige al menos un ingrediente que tengas en casa.")
     prompt = PROMPT_CASA.format(
-        n=cantidad, tiene=", ".join(tiene), basicos=", ".join(sorted(set(basicos + BASICOS_FIJOS))), personas=personas, tiempo=tiempo,
+        n=cantidad + 4, tiene=", ".join(tiene), basicos=", ".join(sorted(set(basicos + BASICOS_FIJOS))), personas=personas, tiempo=tiempo,
         dieta=(f"- Dieta OBLIGATORIA: {n.DIETAS[dieta]}.\n") if n.DIETAS.get(dieta) else "",
         categoria=(f"- Tipo de plato: {categoria}.\n") if categoria else "",
         faltante=UN_FALTANTE if permitir_faltante else SIN_FALTANTES,
@@ -250,7 +250,7 @@ def buscar_con_lo_que_hay(cliente, tiene: list[str], personas: int, tiempo: int,
     if not cero and not uno:
         raise n.ErrorIA("Con esos ingredientes no salió ninguna receta sin comprar nada. "
                         "Agrega uno o dos ingredientes más que tengas y vuelve a buscar.")
-    return cero, un_faltante_distinto(sorted(uno, key=costo_faltantes))
+    return cero[:cantidad], un_faltante_distinto(sorted(uno, key=costo_faltantes))
 
 
 def un_faltante_distinto(uno, ya=()):

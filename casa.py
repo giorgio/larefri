@@ -163,7 +163,20 @@ def es_basico(i) -> bool:
 
 
 def faltantes(r: RecetaCasa, tiene: list[str]) -> list[str]:
-    return [i.nombre for i in r.ingredientes if not es_basico(i) and not lo_tiene(i.nombre, tiene)]
+    falta = [i.nombre for i in r.ingredientes if not es_basico(i) and not lo_tiene(i.nombre, tiene)]
+    return falta + [x for x in faltan_en_nombre(r, tiene) if x not in falta]
+
+
+def faltan_en_nombre(r: RecetaCasa, tiene: list[str]) -> list[str]:
+    """El NOMBRE del plato también cuenta: «canastas de verde con fréjoles» necesita verde y fréjol aunque la
+    IA haya escrito otra cosa en la lista de ingredientes."""
+    palabras = _palabras(r.nombre)
+    out = []
+    for x in TODOS:
+        px = _palabras(x)
+        if len(px) == 1 and px <= palabras and not lo_tiene(x, tiene) and x not in BASICOS:
+            out.append(x)
+    return out
 
 
 def revisar(r: RecetaCasa, tiene: list[str]) -> RecetaCasa:

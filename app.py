@@ -337,7 +337,11 @@ div:has(> .st-key-papel)::before { animation:dp-clac 1.1s ease-out both; }
 # Detalle de una receta
 # ---------------------------------------------------------------------------
 
-@st.dialog("Receta", width="large")
+def _cerrar_receta():
+    st.session_state["abierta"] = None
+
+
+@st.dialog("Receta", width="large", on_dismiss=_cerrar_receta)
 def ver_receta(r):
     c1, c2 = st.columns([1, 1.2], gap="large")
     with c1:
@@ -382,6 +386,9 @@ def tarjeta(r, clave: str, cero: bool):
         d.info_receta(r)
         st.markdown(sello_cero(r) if cero else sello_falta(r), unsafe_allow_html=True)
         if st.button("Ver receta", key=f"ver_{clave}", icon=":material/menu_book:", type="primary", width="stretch"):
+            st.session_state["abierta"] = r.nombre
+        if st.session_state.get("abierta") == r.nombre and not st.session_state.get("_dialogo_puesto"):
+            st.session_state["_dialogo_puesto"] = True      # la receta sigue abierta aunque la página se recargue
             ver_receta(r)
 
 
@@ -419,7 +426,7 @@ def buscar(mas=False):
         ya = [i.nombre for r in s["uno"] for i in r.ingredientes if not i.de_tu_casa]
         s["uno"] = s["uno"] + c.un_faltante_distinto([r for r in uno if r.nombre not in vistos], ya)
     else:
-        s["cero"], s["uno"], s["sin_mas"] = cero, uno, False
+        s["cero"], s["uno"], s["sin_mas"], s["abierta"] = cero, uno, False, None
     s["pedido"] = pedido
 
 
@@ -485,7 +492,7 @@ def resultados():
     total = len(cero) + len(uno)
     if st.session_state.get("sin_mas"):
         st.caption("Esas son todas las recetas que salen con lo que tienes.")
-    elif total < 30 and campo.llego_al_final(total, key=f"fin_{total}"):    # bajó hasta el final: cargar más
+    elif total < 30 and not st.session_state.get("abierta") and campo.llego_al_final(total, key=f"fin_{total}"):    # bajó hasta el final: cargar más
         try:
             antes = total
             buscar(mas=True)
@@ -496,6 +503,7 @@ def resultados():
         st.rerun()
 
 
+st.session_state["_dialogo_puesto"] = False
 d.aplicar_estilos()
 st.markdown(ESTILOS, unsafe_allow_html=True)
 d.cabecera(ir)

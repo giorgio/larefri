@@ -59,7 +59,7 @@ def _sin_variantes(lista):
 
 
 
-POR_BUSQUEDA = 4
+POR_BUSQUEDA = 6
 
 
 class IngredienteCasa(n.Ingrediente):

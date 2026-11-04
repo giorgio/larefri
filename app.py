@@ -269,7 +269,7 @@ div:has(> .st-key-papel)::before { animation:dp-clac 1.1s ease-out both; }
 .st-key-papel [data-testid="stCheckbox"] label:has(input:checked) p { display:inline-block; animation:dp-salto .35s ease-out;
   background:linear-gradient(#0E9C98, #0E9C98) left bottom / 100% 2.5px no-repeat; padding-bottom:5px;
   animation:dp-salto .3s ease-out, dp-trazo .16s ease-in .05s both; }
-.dp-espera { display:flex; flex-direction:column; align-items:center; gap:.6rem; padding:2rem 0; }
+.dp-espera { display:flex; flex-direction:column; align-items:center; gap:.6rem; padding:1.6rem 2.4rem; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); z-index:999; background:rgba(255,255,255,.95); border-radius:22px; box-shadow:0 18px 50px rgba(0,0,0,.18); }
 .dp-espera p { font-family:'Caveat', cursive; font-size:1.6rem; color:#E2571A; margin:0; }
 @keyframes dp-abrir { 0%, 15% { transform:scaleX(1); } 45%, 60% { transform:scaleX(-.25); } 90%, 100% { transform:scaleX(1); } }
 @keyframes dp-hoja { 0%, 100% { transform:rotate(0); } 50% { transform:rotate(-14deg); } }

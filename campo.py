@@ -90,6 +90,12 @@ export default function(component) {
   };
 
   input.oninput = () => {
+    // espacio = como la coma, salvo que la palabra siga (p. ej. "carne " -> "Carne molida", "leche " -> "Leche de coco")
+    if (/\S\s$/.test(input.value)) {
+      const t = norm(input.value);
+      const sigue = sug.some((s) => norm(s).startsWith(t + " "));
+      if (!sigue) { agregar(input.value.trim(), true); aviso.textContent = ""; mostrarFantasma(); return; }
+    }
     if (/[,;]/.test(input.value) || /\s+y\s+$/i.test(input.value)) {
       const partes = input.value.split(/[,;]|\s+y\s+$/i);
       const resto = partes.pop();

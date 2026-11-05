@@ -86,13 +86,9 @@ REGLAS
 1. PROHIBIDO usar ingredientes que no estén en su lista ni en los básicos. {faltante}
    NUNCA sustituyas un ingrediente por otro parecido: maduro ≠ verde, fréjol ≠ lenteja ≠ arveja ≠ garbanzo,
    queso ≠ leche, pollo ≠ carne, fideo ≠ arroz. Usa EXACTAMENTE lo que tiene.
-2. SOLO PLATOS QUE EXISTEN DE VERDAD y que la gente reconoce por su nombre, de TODO EL MUNDO y SIN dar
-   prioridad a la cocina ecuatoriana: varía países (asiática, italiana, mexicana, peruana, india, española,
-   árabe, etc.). P. ej. arroz frito con huevo, tortilla española, shakshuka, pasta aglio e olio, huevos
-   rancheros, dal de lenteja, sopa de fideo. PROHIBIDO inventar platos o nombres creativos o con adjetivos
-   ("express", "saludable", "delicia", "bowl", "fusión"). No hace falta usar todo:
-   elige solo los ingredientes que ese plato lleva. Si con lo que hay no sale un plato conocido, propón menos
-   recetas (aunque sea una o dos) en vez de inventar.
+2. {modo}
+   No hace falta usar todo: elige solo los ingredientes que ese plato lleva. Si con lo que hay no sale nada
+   razonable, propón menos recetas (aunque sea una o dos) en vez de rellenar con platos que no se pueden cocinar.
 3. Marca de_tu_casa = true en cada ingrediente que el usuario tiene o que es básico.
 4. Cantidades realistas para {personas} personas. Si algo no alcanza (p. ej. 2 huevos para 4), ajusta la
    receta o las porciones en vez de inventar más.
@@ -106,6 +102,18 @@ SIN_FALTANTES = "Ningún ingrediente nuevo: la receta tiene que salir con lo que
 UN_FALTANTE = ("Excepción: hasta la MITAD de las recetas pueden tener UN solo ingrediente que no tiene, "
                "barato y fácil de conseguir; márcalo de_tu_casa = false. Cada una de esas recetas debe necesitar un "
                "ingrediente DISTINTO (no repitas el mismo faltante, por ejemplo huevo, en varias recetas).")
+
+MODO_CONOCIDOS = """SOLO PLATOS QUE EXISTEN DE VERDAD y que la gente reconoce por su nombre, de TODO EL MUNDO y SIN dar
+   prioridad a la cocina ecuatoriana: varía países (asiática, italiana, mexicana, peruana, india, española,
+   árabe, etc.). P. ej. arroz frito con huevo, tortilla española, shakshuka, pasta aglio e olio, huevos
+   rancheros, dal de lenteja, sopa de fideo. PROHIBIDO inventar platos o nombres creativos o con adjetivos
+   ("express", "saludable", "delicia", "bowl", "fusión")."""
+
+MODO_CREATIVO = """MODO CREATIVO: INVENTA platos ORIGINALES y NUEVOS que no existan en ningún recetario, combinando
+   sus ingredientes de maneras sorprendentes pero 100% cocinables y apetitosas (técnicas caseras, nada de
+   cocina molecular). Dale a cada plato un NOMBRE PROPIO corto y creativo (p. ej. "Domingo Dorado",
+   "Verde que Te Quiero", "Arroz del Chef Pobre"). Varía las inspiraciones entre platos (asiática, italiana,
+   mexicana, india, árabe, andina...). Los nombres inventados son OBLIGATORIOS aquí: cuanto más originales, mejor."""
 
 
 # ---------------------------------------------------------------------------
@@ -201,8 +209,9 @@ def ahorro(r: RecetaCasa) -> float:
 
 def buscar_con_lo_que_hay(cliente, tiene: list[str], personas: int, tiempo: int, dieta: str = "Todas",
                           categoria: str = "", permitir_faltante: bool = False, excluir=(), cantidad=POR_BUSQUEDA,
-                          basicos=None):
-    """Devuelve (recetas_sin_gastar, recetas_con_un_faltante). 'basicos' = lo de despensa que sí tiene."""
+                          basicos=None, creativo: bool = False):
+    """Devuelve (recetas_sin_gastar, recetas_con_un_faltante). 'basicos' = lo de despensa que sí tiene.
+    creativo=True: la IA inventa platos originales en vez de limitarse a platos conocidos."""
     basicos = list(BASICOS if basicos is None else basicos)
     if not tiene:
         raise n.ErrorIA("Escribe o elige al menos un ingrediente que tengas en casa.")
@@ -211,6 +220,7 @@ def buscar_con_lo_que_hay(cliente, tiene: list[str], personas: int, tiempo: int,
         dieta=(f"- Dieta OBLIGATORIA: {n.DIETAS[dieta]}.\n") if n.DIETAS.get(dieta) else "",
         categoria=(f"- Tipo de plato: {categoria}.\n") if categoria else "",
         faltante=UN_FALTANTE if permitir_faltante else SIN_FALTANTES,
+        modo=MODO_CREATIVO if creativo else MODO_CONOCIDOS,
     )
     todo = list(tiene) + basicos
     # el recetario y la IA trabajan AL MISMO TIEMPO (antes era uno después del otro)
@@ -218,7 +228,7 @@ def buscar_con_lo_que_hay(cliente, tiene: list[str], personas: int, tiempo: int,
     if excluir:
         prompt += "\nNo repitas estas recetas: " + ", ".join(excluir)
     with ThreadPoolExecutor(2) as ex:
-        f_rec = ex.submit(lambda: [] if categoria else
+        f_rec = ex.submit(lambda: [] if (categoria or creativo) else
                           recetas_del_recetario(cliente, tiene, personas, tiempo, dieta, basicos, excluir))
         f_ia = ex.submit(n.llamar_gemini, cliente, prompt, CatalogoCasa, razonamiento="minimal",
                          modelos=(n.MODELO_RESPALDO, n.MODELO_PRINCIPAL))    # el liviano responde mucho más rápido
@@ -238,8 +248,8 @@ def buscar_con_lo_que_hay(cliente, tiene: list[str], personas: int, tiempo: int,
     cat.recetas = [r for r in cat.recetas if r.nombre not in ya]
     for r in cat.recetas:
         r = n.limpiar_receta(r)
-        if not r.ingredientes or not r.pasos or not n.cumple_dieta(r, dieta) or not r.plato_conocido \
-                or n.nombre_inventado(r.nombre):
+        if not r.ingredientes or not r.pasos or not n.cumple_dieta(r, dieta) \
+                or (not creativo and (not r.plato_conocido or n.nombre_inventado(r.nombre))):
             continue
         r = revisar(r, todo)
         falta = faltantes(r, todo)

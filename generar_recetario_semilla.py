@@ -1,0 +1,331 @@
+"""Genera un recetario base variado y completo de 12+ recetas locales para larefri.
+Ejecuta: python generar_recetario_semilla.py
+"""
+
+import json
+import os
+
+RECETAS_BASE = [
+    {
+        "categoria": "Plato fuerte",
+        "receta": {
+            "nombre": "Arroz con huevo",
+            "cocina": "Ecuatoriana",
+            "descripcion": "El clásico plato rápido, económico y reconfortante.",
+            "porciones": 4,
+            "tiempo_minutos": 25,
+            "dificultad": "Fácil",
+            "etiquetas": ["Económica", "Rápida"],
+            "ingredientes": [
+                {"nombre": "Arroz blanco", "cantidad": "500 g", "presentacion": "funda de 1 kg", "precio_presentacion_usd": 1.20, "fraccion_usada": 0.5, "basico_de_despensa": False},
+                {"nombre": "Huevo", "cantidad": "4 unidades", "presentacion": "cubeta de 30", "precio_presentacion_usd": 4.10, "fraccion_usada": 0.133, "basico_de_despensa": False},
+                {"nombre": "Aceite", "cantidad": "2 cdas", "presentacion": "botella de 1 litro", "precio_presentacion_usd": 2.50, "fraccion_usada": 0.03, "basico_de_despensa": True},
+                {"nombre": "Sal", "cantidad": "1 pizca", "presentacion": "funda de 1 kg", "precio_presentacion_usd": 0.50, "fraccion_usada": 0.01, "basico_de_despensa": True}
+            ],
+            "pasos": [
+                "Cocinamos el arroz en agua hirviendo con un chorrito de aceite y sal.",
+                "En una sartén con aceite caliente, freímos los huevos al gusto.",
+                "Servimos el arroz caliente acompañado de los huevos fritos encimita."
+            ],
+            "calorias_por_porcion": 350,
+            "proteina_g_por_porcion": 12,
+            "por_que_es_saludable": "Aporta energía limpia de carbohidratos y proteína de alto valor biológico del huevo.",
+            "busqueda_foto": "fried egg with rice",
+            "icono": "huevo",
+            "plato_conocido": True,
+            "alergenos": ["Huevo"]
+        }
+    },
+    {
+        "categoria": "Plato fuerte",
+        "receta": {
+            "nombre": "Arroz frito con huevo",
+            "cocina": "Asiática",
+            "descripcion": "Arroz salteado estilo oriental con vegetales y huevo.",
+            "porciones": 4,
+            "tiempo_minutos": 30,
+            "dificultad": "Fácil",
+            "etiquetas": ["Vegetariana", "Rápida"],
+            "ingredientes": [
+                {"nombre": "Arroz blanco", "cantidad": "500 g", "presentacion": "funda de 1 kg", "precio_presentacion_usd": 1.20, "fraccion_usada": 0.5, "basico_de_despensa": False},
+                {"nombre": "Huevo", "cantidad": "3 unidades", "presentacion": "cubeta de 30", "precio_presentacion_usd": 4.10, "fraccion_usada": 0.1, "basico_de_despensa": False},
+                {"nombre": "Zanahoria", "cantidad": "2 unidades", "presentacion": "1 libra", "precio_presentacion_usd": 0.60, "fraccion_usada": 0.5, "basico_de_despensa": False},
+                {"nombre": "Cebolla larga", "cantidad": "2 ramas", "presentacion": "atado", "precio_presentacion_usd": 0.50, "fraccion_usada": 0.5, "basico_de_despensa": False},
+                {"nombre": "Salsa china", "cantidad": "2 cdas", "presentacion": "frasco de 200 ml", "precio_presentacion_usd": 1.50, "fraccion_usada": 0.1, "basico_de_despensa": False},
+                {"nombre": "Aceite", "cantidad": "2 cdas", "presentacion": "botella de 1 litro", "precio_presentacion_usd": 2.50, "fraccion_usada": 0.03, "basico_de_despensa": True}
+            ],
+            "pasos": [
+                "Picamos la zanahoria en cubos pequeños y la cebolla fina.",
+                "Batimos los huevos y los salteamos en el wok o sartén grande hasta picarlos.",
+                "Agregamos el arroz frío cocinado, los vegetales y la salsa china. Salteamos a fuego alto."
+            ],
+            "calorias_por_porcion": 380,
+            "proteina_g_por_porcion": 14,
+            "por_que_es_saludable": "Incorpora vegetales frescos y una preparación rápida al wok.",
+            "busqueda_foto": "fried rice egg",
+            "icono": "arroz",
+            "plato_conocido": True,
+            "alergenos": ["Huevo", "Soya"]
+        }
+    },
+    {
+        "categoria": "Desayunos",
+        "receta": {
+            "nombre": "Huevos pericos",
+            "cocina": "Colombiana",
+            "descripcion": "Huevos revueltos suaves con refrito de tomate y cebolla.",
+            "porciones": 4,
+            "tiempo_minutos": 15,
+            "dificultad": "Fácil",
+            "etiquetas": ["Desayuno", "Rápida"],
+            "ingredientes": [
+                {"nombre": "Huevo", "cantidad": "4 unidades", "presentacion": "cubeta de 30", "precio_presentacion_usd": 4.10, "fraccion_usada": 0.133, "basico_de_despensa": False},
+                {"nombre": "Tomate", "cantidad": "2 unidades", "presentacion": "1 libra", "precio_presentacion_usd": 0.60, "fraccion_usada": 0.5, "basico_de_despensa": False},
+                {"nombre": "Cebolla larga", "cantidad": "2 ramas", "presentacion": "atado", "precio_presentacion_usd": 0.50, "fraccion_usada": 0.5, "basico_de_despensa": False},
+                {"nombre": "Aceite", "cantidad": "1 cda", "presentacion": "botella de 1 litro", "precio_presentacion_usd": 2.50, "fraccion_usada": 0.02, "basico_de_despensa": True}
+            ],
+            "pasos": [
+                "Hacemos un refrito con el tomate picado y la cebolla en un poco de aceite.",
+                "Añadimos los huevos batidos con una pizca de sal.",
+                "Revolvemos suavemente a fuego medio hasta que queden jugosos."
+            ],
+            "calorias_por_porcion": 180,
+            "proteina_g_por_porcion": 10,
+            "por_que_es_saludable": "Proteína magra combinada con antioxidantes del tomate fresco.",
+            "busqueda_foto": "scrambled eggs tomato",
+            "icono": "huevo",
+            "plato_conocido": True,
+            "alergenos": ["Huevo"]
+        }
+    },
+    {
+        "categoria": "Sopas",
+        "receta": {
+            "nombre": "Locro de papa",
+            "cocina": "Ecuatoriana",
+            "descripcion": "Sopa cremosa tradicional ecuatoriana a base de papa chola y queso.",
+            "porciones": 4,
+            "tiempo_minutos": 40,
+            "dificultad": "Fácil",
+            "etiquetas": ["Tradicional", "Vegetariana"],
+            "ingredientes": [
+                {"nombre": "Papa chola", "cantidad": "1.5 kg", "presentacion": "funda de 2 kg", "precio_presentacion_usd": 2.00, "fraccion_usada": 0.75, "basico_de_despensa": False},
+                {"nombre": "Queso fresco", "cantidad": "200 g", "presentacion": "unidad de 454 g", "precio_presentacion_usd": 3.20, "fraccion_usada": 0.44, "basico_de_despensa": False},
+                {"nombre": "Leche", "cantidad": "250 ml", "presentacion": "funda de 1 litro", "precio_presentacion_usd": 0.95, "fraccion_usada": 0.25, "basico_de_despensa": False},
+                {"nombre": "Cebolla blanca", "cantidad": "1 rama", "presentacion": "atado", "precio_presentacion_usd": 0.50, "fraccion_usada": 0.33, "basico_de_despensa": False},
+                {"nombre": "Achiote", "cantidad": "1 cda", "presentacion": "frasco", "precio_presentacion_usd": 1.00, "fraccion_usada": 0.05, "basico_de_despensa": True}
+            ],
+            "pasos": [
+                "Hacer un refrito con achiote y cebolla blanca picada.",
+                "Agregar las papas picadas en cubos (mitad grandes y mitad pequeñas para que espese).",
+                "Cubrir con agua y cocinar a fuego medio hasta que las papas se deshagan parcialmente.",
+                "Agregar la leche, el queso desmenuzado y rectificar sal antes de servir."
+            ],
+            "calorias_por_porcion": 320,
+            "proteina_g_por_porcion": 11,
+            "por_que_es_saludable": "Sopa reconfortante rica en potasio y calcio.",
+            "busqueda_foto": "potato soup cheese",
+            "icono": "sopa",
+            "plato_conocido": True,
+            "alergenos": ["Lácteos"]
+        }
+    },
+    {
+        "categoria": "Sopas",
+        "receta": {
+            "nombre": "Sopa de lentejas",
+            "cocina": "Ecuatoriana",
+            "descripcion": "Nutritiva sopa de legumbres con verduras de estación.",
+            "porciones": 4,
+            "tiempo_minutos": 45,
+            "dificultad": "Fácil",
+            "etiquetas": ["Vegana", "Alta en fibra"],
+            "ingredientes": [
+                {"nombre": "Lenteja", "cantidad": "250 g", "presentacion": "funda de 500 g", "precio_presentacion_usd": 1.10, "fraccion_usada": 0.5, "basico_de_despensa": False},
+                {"nombre": "Papa chola", "cantidad": "2 unidades", "presentacion": "1 libra", "precio_presentacion_usd": 0.50, "fraccion_usada": 1.0, "basico_de_despensa": False},
+                {"nombre": "Zanahoria", "cantidad": "1 unidad", "presentacion": "1 libra", "precio_presentacion_usd": 0.60, "fraccion_usada": 0.33, "basico_de_despensa": False},
+                {"nombre": "Cebolla paiteña", "cantidad": "1 unidad", "presentacion": "1 libra", "precio_presentacion_usd": 0.60, "fraccion_usada": 0.33, "basico_de_despensa": False},
+                {"nombre": "Ajo", "cantidad": "2 dientes", "presentacion": "cabeza", "precio_presentacion_usd": 0.30, "fraccion_usada": 0.2, "basico_de_despensa": True}
+            ],
+            "pasos": [
+                "Lavar las lentejas y colocarlas en una olla con abundante agua.",
+                "Hacer un refrito picando la cebolla, ajo y zanahoria.",
+                "Incorporar el refrito y las papas picadas a las lentejas.",
+                "Cocinar a fuego medio durante 35 minutos hasta que las lentejas estén suaves."
+            ],
+            "calorias_por_porcion": 280,
+            "proteina_g_por_porcion": 15,
+            "por_que_es_saludable": "Excelente fuente de hierro vegetal, fibra y proteínas minerales.",
+            "busqueda_foto": "lentil soup",
+            "icono": "sopa",
+            "plato_conocido": True,
+            "alergenos": []
+        }
+    },
+    {
+        "categoria": "Plato fuerte",
+        "receta": {
+            "nombre": "Seco de pollo",
+            "cocina": "Ecuatoriana",
+            "descripcion": "Estofado criollo de pollo acompañado de arroz amarillo.",
+            "porciones": 4,
+            "tiempo_minutos": 50,
+            "dificultad": "Media",
+            "etiquetas": ["Alta en proteína", "Tradicional"],
+            "ingredientes": [
+                {"nombre": "Pollo", "cantidad": "4 presas", "presentacion": "1 kg", "precio_presentacion_usd": 3.80, "fraccion_usada": 0.8, "basico_de_despensa": False},
+                {"nombre": "Arroz blanco", "cantidad": "400 g", "presentacion": "funda de 1 kg", "precio_presentacion_usd": 1.20, "fraccion_usada": 0.4, "basico_de_despensa": False},
+                {"nombre": "Tomate", "cantidad": "3 unidades", "presentacion": "1 libra", "precio_presentacion_usd": 0.60, "fraccion_usada": 0.75, "basico_de_despensa": False},
+                {"nombre": "Cebolla paiteña", "cantidad": "1 unidad", "presentacion": "1 libra", "precio_presentacion_usd": 0.60, "fraccion_usada": 0.5, "basico_de_despensa": False},
+                {"nombre": "Pimiento verde", "cantidad": "1 unidad", "presentacion": "unidad", "precio_presentacion_usd": 0.30, "fraccion_usada": 1.0, "basico_de_despensa": False},
+                {"nombre": "Achiote", "cantidad": "1 cda", "presentacion": "frasco", "precio_presentacion_usd": 1.00, "fraccion_usada": 0.05, "basico_de_despensa": True}
+            ],
+            "pasos": [
+                "Licuar el tomate, cebolla, pimiento y un poco de agua o naranjilla.",
+                "Dorar el pollo en una olla con achiote.",
+                "Verter el licuado sobre el pollo y cocinar tapado durante 35 minutos.",
+                "Servir con arroz amarillo cocinado con achiote."
+            ],
+            "calorias_por_porcion": 490,
+            "proteina_g_por_porcion": 34,
+            "por_que_es_saludable": "Plato rico en proteínas magras con salsa natural hecha de puros vegetales.",
+            "busqueda_foto": "chicken stew rice",
+            "icono": "pollo",
+            "plato_conocido": True,
+            "alergenos": []
+        }
+    },
+    {
+        "categoria": "Plato fuerte",
+        "receta": {
+            "nombre": "Menestra de fréjol con arroz",
+            "cocina": "Ecuatoriana",
+            "descripcion": "Menestra casera de fréjol rojo con refrito ecuatoriano.",
+            "porciones": 4,
+            "tiempo_minutos": 60,
+            "dificultad": "Media",
+            "etiquetas": ["Tradicional", "Vegana"],
+            "ingredientes": [
+                {"nombre": "Fréjol", "cantidad": "250 g", "presentacion": "funda de 500 g", "precio_presentacion_usd": 1.30, "fraccion_usada": 0.5, "basico_de_despensa": False},
+                {"nombre": "Arroz blanco", "cantidad": "400 g", "presentacion": "funda de 1 kg", "precio_presentacion_usd": 1.20, "fraccion_usada": 0.4, "basico_de_despensa": False},
+                {"nombre": "Cebolla paiteña", "cantidad": "1 unidad", "presentacion": "1 libra", "precio_presentacion_usd": 0.60, "fraccion_usada": 0.5, "basico_de_despensa": False},
+                {"nombre": "Pimiento verde", "cantidad": "1 unidad", "presentacion": "unidad", "precio_presentacion_usd": 0.30, "fraccion_usada": 0.5, "basico_de_despensa": False},
+                {"nombre": "Ajo", "cantidad": "2 dientes", "presentacion": "cabeza", "precio_presentacion_usd": 0.30, "fraccion_usada": 0.2, "basico_de_despensa": True}
+            ],
+            "pasos": [
+                "Cocinar el fréjol previamente remojado hasta que esté tierno.",
+                "Preparar un refrito sabroso con cebolla, pimiento, ajo y comino.",
+                "Mezclar el refrito con el fréjol y aplastar una parte para darle espesor.",
+                "Servir acompañado de arroz blanco caliente."
+            ],
+            "calorias_por_porcion": 420,
+            "proteina_g_por_porcion": 18,
+            "por_que_es_saludable": "Combinación perfecta de cereal y legumbre que forma proteína completa.",
+            "busqueda_foto": "beans rice stew",
+            "icono": "menestra",
+            "plato_conocido": True,
+            "alergenos": []
+        }
+    },
+    {
+        "categoria": "Entradas",
+        "receta": {
+            "nombre": "Tortilla de verde",
+            "cocina": "Ecuatoriana",
+            "descripcion": "Masa de plátano verde majado rellena de queso fresco.",
+            "porciones": 4,
+            "tiempo_minutos": 30,
+            "dificultad": "Fácil",
+            "etiquetas": ["Vegetariana", "Sin gluten"],
+            "ingredientes": [
+                {"nombre": "Verde", "cantidad": "3 unidades", "presentacion": "unidad", "precio_presentacion_usd": 0.80, "fraccion_usada": 1.0, "basico_de_despensa": False},
+                {"nombre": "Queso fresco", "cantidad": "150 g", "presentacion": "unidad de 454 g", "precio_presentacion_usd": 3.20, "fraccion_usada": 0.33, "basico_de_despensa": False},
+                {"nombre": "Aceite", "cantidad": "2 cdas", "presentacion": "botella de 1 litro", "precio_presentacion_usd": 2.50, "fraccion_usada": 0.03, "basico_de_despensa": True},
+                {"nombre": "Sal", "cantidad": "1 pizca", "presentacion": "funda de 1 kg", "precio_presentacion_usd": 0.50, "fraccion_usada": 0.01, "basico_de_despensa": True}
+            ],
+            "pasos": [
+                "Cocinar los plátanos verdes en trozos en agua con sal hasta que estén suaves.",
+                "Majar el verde en caliente con un toque de aceite hasta formar una masa maleable.",
+                "Armar las tortillas colocando queso en el centro y sellando los bordes.",
+                "Dorar en una sartén con muy poco aceite por ambos lados."
+            ],
+            "calorias_por_porcion": 230,
+            "proteina_g_por_porcion": 7,
+            "por_que_es_saludable": "El plátano verde es rico en almidón resistente favorecedor para la microbiota.",
+            "busqueda_foto": "plantain patties cheese",
+            "icono": "otro",
+            "plato_conocido": True,
+            "alergenos": ["Lácteos"]
+        }
+    },
+    {
+        "categoria": "Plato fuerte",
+        "receta": {
+            "nombre": "Spaghetti al pomodoro",
+            "cocina": "Italiana",
+            "descripcion": "Pasta italiana clásica con salsa natural de tomates frescos y ajo.",
+            "porciones": 4,
+            "tiempo_minutos": 20,
+            "dificultad": "Fácil",
+            "etiquetas": ["Vegetariana", "Rápida"],
+            "ingredientes": [
+                {"nombre": "Fideo", "cantidad": "400 g", "presentacion": "funda de 500 g", "precio_presentacion_usd": 1.10, "fraccion_usada": 0.8, "basico_de_despensa": False},
+                {"nombre": "Tomate", "cantidad": "4 unidades", "presentacion": "1 libra", "precio_presentacion_usd": 0.60, "fraccion_usada": 1.0, "basico_de_despensa": False},
+                {"nombre": "Ajo", "cantidad": "2 dientes", "presentacion": "cabeza", "precio_presentacion_usd": 0.30, "fraccion_usada": 0.2, "basico_de_despensa": True},
+                {"nombre": "Aceite", "cantidad": "2 cdas", "presentacion": "botella de 1 litro", "precio_presentacion_usd": 2.50, "fraccion_usada": 0.03, "basico_de_despensa": True}
+            ],
+            "pasos": [
+                "Cocinar los fideos en agua hirviendo con sal hasta que estén al dente.",
+                "Saltear el ajo picado en aceite de oliva y agregar los tomates picados fino.",
+                "Cocinar la salsa durante 10 minutos a fuego lento.",
+                "Mezclar la pasta directamente en la sartén con la salsa de tomate."
+            ],
+            "calorias_por_porcion": 360,
+            "proteina_g_por_porcion": 11,
+            "por_que_es_saludable": "Salsa ligera rica en licopeno antioxidante del tomate.",
+            "busqueda_foto": "spaghetti tomato sauce",
+            "icono": "pasta",
+            "plato_conocido": True,
+            "alergenos": ["Gluten"]
+        }
+    },
+    {
+        "categoria": "Ensaladas",
+        "receta": {
+            "nombre": "Ensalada rusa casera",
+            "cocina": "Internacional",
+            "descripcion": "Ensalada fresca de papas, zanahorias y arvejas con mayonesa ligera.",
+            "porciones": 4,
+            "tiempo_minutos": 25,
+            "dificultad": "Fácil",
+            "etiquetas": ["Vegetariana", "Entrada"],
+            "ingredientes": [
+                {"nombre": "Papa chola", "cantidad": "3 unidades", "presentacion": "1 libra", "precio_presentacion_usd": 0.50, "fraccion_usada": 1.0, "basico_de_despensa": False},
+                {"nombre": "Zanahoria", "cantidad": "2 unidades", "presentacion": "1 libra", "precio_presentacion_usd": 0.60, "fraccion_usada": 0.5, "basico_de_despensa": False},
+                {"nombre": "Arveja", "cantidad": "100 g", "presentacion": "1 libra", "precio_presentacion_usd": 1.00, "fraccion_usada": 0.22, "basico_de_despensa": False},
+                {"nombre": "Mayonesa", "cantidad": "2 cdas", "presentacion": "frasco de 200 g", "precio_presentacion_usd": 1.50, "fraccion_usada": 0.15, "basico_de_despensa": False}
+            ],
+            "pasos": [
+                "Cozinar la papa y zanahoria cortadas en cubos junto con las arvejas.",
+                "Escurrir los vegetales y dejar enfriar completamente.",
+                "Mezclar delicadamente con la mayonesa y un toque de sal y pimienta."
+            ],
+            "calorias_por_porcion": 210,
+            "proteina_g_por_porcion": 5,
+            "por_que_es_saludable": "Acompañante rico en vitaminas A y C de los vegetales frescos.",
+            "busqueda_foto": "potato salad peas carrot",
+            "icono": "ensalada",
+            "plato_conocido": True,
+            "alergenos": ["Huevo"]
+        }
+    }
+]
+
+def generar():
+    datos = {"version": 1, "recetas": RECETAS_BASE}
+    with open("recetario.json", "w", encoding="utf-8") as f:
+        json.dump(datos, f, ensure_ascii=False, indent=2)
+    print(f"¡Listo! Se creó recetario.json con {len(RECETAS_BASE)} recetas semilla completas.")
+
+if __name__ == "__main__":
+    generar()

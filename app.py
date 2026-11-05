@@ -403,11 +403,15 @@ def buscar(mas=False):
                   categoria="" if s["tipo_in"] == "Cualquiera" else s["tipo_in"], permitir=True,
                   basicos=list(s.get("basicos") or []), creativo=bool(s.get("creativo")))
     excluir = [r.nombre for r in s["cero"] + s["uno"]] if mas else []
+    gratis = (not pedido["creativo"]                    # el recetario guardado responde solo, sin IA ni espera
+              and c.hay_suficiente_en_memoria(pedido["tiene"], pedido["personas"], pedido["tiempo"],
+                                              pedido["dieta"], pedido["categoria"], excluir))
     espera = st.empty()
-    if not mas:                              # el isotipo de espera solo aparece en la primera búsqueda
+    if not mas and not gratis:                 # el isotipo de espera solo aparece en la primera búsqueda con IA
         espera.markdown(ESPERA_HTML, unsafe_allow_html=True)
     try:
-        esperar_turno()
+        if not gratis:                         # sin llamada a la IA no hace falta espaciar consultas
+            esperar_turno()
         cero, uno = c.buscar_con_lo_que_hay(
             cliente_gemini(), pedido["tiene"], pedido["personas"], pedido["tiempo"], pedido["dieta"],
             pedido["categoria"], pedido["permitir"], excluir=excluir, basicos=pedido["basicos"],

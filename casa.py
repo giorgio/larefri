@@ -218,14 +218,46 @@ def ahorro(r: RecetaCasa) -> float:
     return round(sum(n.costo_ingrediente(i) for i in r.ingredientes if i.de_tu_casa and not i.basico_de_despensa), 2)
 
 
+def recetas_de_la_memoria(tiene, personas, tiempo, dieta="Todas", categoria="", excluir=()):
+    """Recetas del recetario guardado (memoria.py) que salen SOLO con lo que hay: gratis y sin llamar a la IA."""
+    import memoria
+    todo = list(tiene) + BASICOS
+    out = []
+    for r in memoria.buscar(categoria=categoria, dieta=dieta, tiempo=tiempo, excluir=excluir):
+        d = r.model_dump()
+        rc = RecetaCasa.model_validate({**d, "ingredientes": [{**i, "de_tu_casa": False}
+                                                              for i in d["ingredientes"]]})
+        rc = n.ajustar_porciones(rc, personas)
+        rc = revisar(rc, todo)
+        if not faltantes(rc, todo):
+            out.append(rc)
+
+    def cuantos_usa(rc):
+        return sum(1 for t in tiene if any(lo_tiene(i.nombre, [t]) for i in rc.ingredientes if not es_basico(i)))
+
+    out.sort(key=lambda rc: (-cuantos_usa(rc), n.costo_porcion(rc)))   # primero las que más aprovechan
+    return out
+
+
+def hay_suficiente_en_memoria(tiene, personas, tiempo, dieta="Todas", categoria="", excluir=(),
+                              cantidad=POR_BUSQUEDA):
+    """True si el recetario guardado ya cubre la búsqueda: la app responde al instante, sin esperar a la IA."""
+    return len(recetas_de_la_memoria(tiene, personas, tiempo, dieta, categoria, excluir)) >= cantidad
+
+
 def buscar_con_lo_que_hay(cliente, tiene: list[str], personas: int, tiempo: int, dieta: str = "Todas",
                           categoria: str = "", permitir_faltante: bool = False, excluir=(), cantidad=POR_BUSQUEDA,
                           basicos=None, creativo: bool = False):
     """Devuelve (recetas_sin_gastar, recetas_con_un_faltante). 'basicos' = lo de despensa que sí tiene.
-    creativo=True: la IA inventa platos originales en vez de limitarse a platos conocidos."""
+    creativo=True: la IA inventa platos originales en vez de limitarse a platos conocidos.
+    Primero busca en el recetario guardado (gratis); la IA solo entra cuando el recetario no alcanza."""
     basicos = list(BASICOS if basicos is None else basicos)
     if not tiene:
         raise n.ErrorIA("Escribe o elige al menos un ingrediente que tengas en casa.")
+    de_memoria = [] if creativo else recetas_de_la_memoria(tiene, personas, tiempo, dieta, categoria, excluir)
+    if len(de_memoria) >= cantidad:
+        print(f"[memoria] {len(de_memoria)} recetas guardadas: búsqueda gratis, sin IA", flush=True)
+        return de_memoria[:cantidad], []
     prompt = PROMPT_CASA.format(
         n=cantidad + 4, tiene=", ".join(tiene), basicos=", ".join(sorted(set(basicos + BASICOS_FIJOS))), personas=personas, tiempo=tiempo,
         dieta=(f"- Dieta OBLIGATORIA: {n.DIETAS[dieta]}.\n") if n.DIETAS.get(dieta) else "",
@@ -235,10 +267,11 @@ def buscar_con_lo_que_hay(cliente, tiene: list[str], personas: int, tiempo: int,
         uso=USO_TOTAL if creativo else USO_PARCIAL,
     )
     todo = list(tiene) + basicos
-    # el recetario y la IA trabajan AL MISMO TIEMPO (antes era uno después del otro)
+    # el recetario de TheMealDB y la IA trabajan AL MISMO TIEMPO (antes era uno después del otro)
     from concurrent.futures import ThreadPoolExecutor
     if excluir:
         prompt += "\nNo repitas estas recetas: " + ", ".join(excluir)
+    nombres_memoria = {r.nombre for r in de_memoria}
     with ThreadPoolExecutor(2) as ex:
         f_rec = ex.submit(lambda: [] if (categoria or creativo) else
                           recetas_del_recetario(cliente, tiene, personas, tiempo, dieta, basicos, excluir))
@@ -246,15 +279,17 @@ def buscar_con_lo_que_hay(cliente, tiene: list[str], personas: int, tiempo: int,
                          modelos=n.MODELOS_CASCADA)    # el liviano responde mucho más rápido
         import time as _t
         t0 = _t.time()
-        cero = f_rec.result()
+        recetario = [r for r in f_rec.result() if r.nombre not in nombres_memoria]
         print(f"[tiempo] recetario: {_t.time() - t0:.1f} s", flush=True)
         try:
             cat, _ = f_ia.result()
             print(f"[tiempo] IA: {_t.time() - t0:.1f} s", flush=True)
         except n.ErrorIA:
+            cero = de_memoria + recetario
             if cero:
                 return cero, []
             raise
+    cero = de_memoria + recetario
     uno = []
     ya = {r.nombre for r in cero}
     cat.recetas = [r for r in cat.recetas if r.nombre not in ya]
@@ -299,6 +334,14 @@ def buscar_con_lo_que_hay(cliente, tiene: list[str], personas: int, tiempo: int,
                             "Prueba con menos ingredientes o quita alguno que no combine bien.")
         raise n.ErrorIA("Con esos ingredientes no salió ninguna receta sin comprar nada. "
                         "Agrega uno o dos ingredientes más que tengas y vuelve a buscar.")
+    if not creativo:                       # lo que la IA crea hoy engorda el recetario guardado de mañana
+        try:
+            import memoria
+            memoria.aprender([r for r in cero + uno
+                              if r.nombre not in nombres_memoria and not r.busqueda_foto.startswith("url:")],
+                             categoria)
+        except Exception:  # noqa: BLE001
+            pass
     return cero[:cantidad], un_faltante_distinto(sorted(uno, key=costo_faltantes))
 
 

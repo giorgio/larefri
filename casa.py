@@ -230,7 +230,7 @@ def buscar_con_lo_que_hay(cliente, tiene: list[str], personas: int, tiempo: int,
         n=cantidad + 4, tiene=", ".join(tiene), basicos=", ".join(sorted(set(basicos + BASICOS_FIJOS))), personas=personas, tiempo=tiempo,
         dieta=(f"- Dieta OBLIGATORIA: {n.DIETAS[dieta]}.\n") if n.DIETAS.get(dieta) else "",
         categoria=(f"- Tipo de plato: {categoria}.\n") if categoria else "",
-        faltante=UN_FALTANTE if permitir_faltante else SIN_FALTANTES,
+        faltante=SIN_FALTANTES if creativo else (UN_FALTANTE if permitir_faltante else SIN_FALTANTES),
         modo=MODO_CREATIVO if creativo else MODO_CONOCIDOS,
         uso=USO_TOTAL if creativo else USO_PARCIAL,
     )
@@ -273,6 +273,26 @@ def buscar_con_lo_que_hay(cliente, tiene: list[str], personas: int, tiempo: int,
             cero.append(r)
         elif permitir_faltante and len(falta) == 1:
             uno.append(r)
+    if creativo and not cero:              # segundo intento: instrucción directa con la lista exacta
+        refuerzo = (prompt + "\n\nÚLTIMO AVISO: devuelve al menos 3 platos y CADA uno debe incluir TODOS estos "
+                    "ingredientes exactos: " + ", ".join(tiene) + ". Si un plato deja alguno fuera, no lo incluyas.")
+        try:
+            cat2, _ = n.llamar_gemini(cliente, refuerzo, CatalogoCasa, razonamiento="minimal",
+                                      modelos=(n.MODELO_RESPALDO, n.MODELO_PRINCIPAL))
+        except n.ErrorIA:
+            cat2 = None
+        if cat2:
+            vistos2 = {r.nombre for r in cero}
+            for r in cat2.recetas:
+                if r.nombre in vistos2:
+                    continue
+                r = n.limpiar_receta(r)
+                if not r.ingredientes or not r.pasos or not n.cumple_dieta(r, dieta):
+                    continue
+                r = revisar(r, todo)
+                if not faltantes(r, todo) and usa_todos(r, tiene):
+                    cero.append(r)
+                    vistos2.add(r.nombre)
     if not cero and not uno:
         if creativo:
             raise n.ErrorIA("El Chef inteligente no logró un plato que use el 100% de lo que marcaste. "

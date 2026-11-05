@@ -87,8 +87,7 @@ REGLAS
    NUNCA sustituyas un ingrediente por otro parecido: maduro ≠ verde, fréjol ≠ lenteja ≠ arveja ≠ garbanzo,
    queso ≠ leche, pollo ≠ carne, fideo ≠ arroz. Usa EXACTAMENTE lo que tiene.
 2. {modo}
-   No hace falta usar todo: elige solo los ingredientes que ese plato lleva. Si con lo que hay no sale nada
-   razonable, propón menos recetas (aunque sea una o dos) en vez de rellenar con platos que no se pueden cocinar.
+   {uso}
 3. Marca de_tu_casa = true en cada ingrediente que el usuario tiene o que es básico.
 4. Cantidades realistas para {personas} personas. Si algo no alcanza (p. ej. 2 huevos para 4), ajusta la
    receta o las porciones en vez de inventar más.
@@ -102,6 +101,12 @@ SIN_FALTANTES = "Ningún ingrediente nuevo: la receta tiene que salir con lo que
 UN_FALTANTE = ("Excepción: hasta la MITAD de las recetas pueden tener UN solo ingrediente que no tiene, "
                "barato y fácil de conseguir; márcalo de_tu_casa = false. Cada una de esas recetas debe necesitar un "
                "ingrediente DISTINTO (no repitas el mismo faltante, por ejemplo huevo, en varias recetas).")
+USO_PARCIAL = ("No hace falta usar todo: elige solo los ingredientes que ese plato lleva. Si con lo que hay no sale "
+               "nada razonable, propón menos recetas (aunque sea una o dos) en vez de rellenar con platos que no se "
+               "pueden cocinar.")
+USO_TOTAL = ("OBLIGATORIO: cada receta tiene que usar el 100% de los ingredientes de la lista del usuario, sin dejar "
+             "NINGUNO fuera. Solo puedes añadir básicos de despensa (sal, aceite, especias). Si un plato no usa "
+             "absolutamente todo lo que el usuario marcó, descártalo y propón otro que sí.")
 
 MODO_CONOCIDOS = """SOLO PLATOS QUE EXISTEN DE VERDAD y que la gente reconoce por su nombre, de TODO EL MUNDO y SIN dar
    prioridad a la cocina ecuatoriana: varía países (asiática, italiana, mexicana, peruana, india, española,
@@ -195,6 +200,12 @@ def revisar(r: RecetaCasa, tiene: list[str]) -> RecetaCasa:
     return r
 
 
+def usa_todos(r: RecetaCasa, tiene: list[str]) -> bool:
+    """True solo si la receta usa el 100% de lo que el usuario marcó (los básicos no cuentan)."""
+    aprovechables = [i for i in r.ingredientes if not es_basico(i)]
+    return all(any(lo_tiene(i.nombre, [t]) for i in aprovechables) for t in tiene)
+
+
 def costo_faltantes(r: RecetaCasa) -> float:
     """Lo que tendría que gastar (paquetes enteros de lo que le falta)."""
     import math
@@ -221,6 +232,7 @@ def buscar_con_lo_que_hay(cliente, tiene: list[str], personas: int, tiempo: int,
         categoria=(f"- Tipo de plato: {categoria}.\n") if categoria else "",
         faltante=UN_FALTANTE if permitir_faltante else SIN_FALTANTES,
         modo=MODO_CREATIVO if creativo else MODO_CONOCIDOS,
+        uso=USO_TOTAL if creativo else USO_PARCIAL,
     )
     todo = list(tiene) + basicos
     # el recetario y la IA trabajan AL MISMO TIEMPO (antes era uno después del otro)
@@ -253,11 +265,18 @@ def buscar_con_lo_que_hay(cliente, tiene: list[str], personas: int, tiempo: int,
             continue
         r = revisar(r, todo)
         falta = faltantes(r, todo)
+        if creativo:                       # Chef inteligente: debe usar el 100% de lo marcado, sin comprar nada
+            if not falta and usa_todos(r, tiene):
+                cero.append(r)
+            continue
         if not falta:
             cero.append(r)
         elif permitir_faltante and len(falta) == 1:
             uno.append(r)
     if not cero and not uno:
+        if creativo:
+            raise n.ErrorIA("El Chef inteligente no logró un plato que use el 100% de lo que marcaste. "
+                            "Prueba con menos ingredientes o quita alguno que no combine bien.")
         raise n.ErrorIA("Con esos ingredientes no salió ninguna receta sin comprar nada. "
                         "Agrega uno o dos ingredientes más que tengas y vuelve a buscar.")
     return cero[:cantidad], un_faltante_distinto(sorted(uno, key=costo_faltantes))

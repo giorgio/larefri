@@ -153,6 +153,75 @@ def _imagen_ia(r):
     return {"url": datos, "fuente": "IA"} if datos else None
 
 
+# ---------------------------------------------------------------------------
+# Foto de la refri: la IA reconoce los ingredientes y los marca solos
+# ---------------------------------------------------------------------------
+
+@st.cache_data(ttl=86400, show_spinner=False, max_entries=200)
+def ingredientes_en_foto(datos: bytes, sugerencias: tuple) -> list[str]:
+    """Gemini mira la foto y devuelve solo ingredientes de la lista permitida (se guarda en caché:
+    la misma foto no se paga dos veces)."""
+    from google.genai import types
+    esperar_turno()
+    cliente = cliente_gemini()
+    prompt = ("Esta es una foto de una refrigeradora o despensa. "
+              "Reconoce SOLO ingredientes de cocina de esta lista permitida: " + ", ".join(sugerencias) + ". "
+              "Responde únicamente con los nombres separados por coma, escritos exactamente como en la lista "
+              "(sin cantidades, sin marcas, sin explicaciones). Si no reconoces nada de la lista, responde: ninguno")
+    resp = cliente.models.generate_content(
+        model="gemini-2.5-flash",
+        contents=[prompt, types.Part.from_bytes(data=datos, mime_type="image/jpeg")])
+    texto = (resp.text or "").strip().lower()
+    if not texto or "ninguno" in texto:
+        return []
+    permitidas = {n._clave(s): s for s in sugerencias}
+    return [permitidas[n._clave(x)] for x in texto.split(",") if n._clave(x) in permitidas]
+
+
+def marcar_desde_foto(archivo):
+    """Lo que reconoció la IA se marca en la cuadrícula o se añade como cuadrito de 'Añade un ingrediente'."""
+    detectados = ingredientes_en_foto(archivo.getvalue(), tuple(c.SUGERENCIAS))
+    marcados = []
+    for d in detectados:
+        k = n._clave(d)
+        i = next((j for j, x in enumerate(c.COMUNES) if n._clave(x) == k), None)
+        if i is not None:
+            st.session_state[f"ing_{i}"] = True      # marca el botón del ingrediente
+            marcados.append(c.COMUNES[i])
+        else:
+            items = st.session_state.setdefault("algo_mas_items", [])
+            if all(n._clave(y) != k for y in items):
+                items.append(d)                       # va como cuadrito propio
+                marcados.append(d)
+    st.session_state["_foto_mensaje"] = (
+        "📷 De la foto reconocí: " + ", ".join(marcados) + "." if marcados else
+        "No reconocí ingredientes de la lista en esa foto. Prueba con más luz o más de cerca.")
+
+
+def foto_refri():
+    with st.expander("📷 O sácale una foto a tu refri"):
+        st.caption("La IA mira la foto y marca sola los ingredientes que reconoce.")
+        archivo = st.file_uploader("Foto de tu refri o despensa", type=["jpg", "jpeg", "png", "webp"],
+                                   key="foto_refri", label_visibility="collapsed")
+        if archivo is not None and st.session_state.get("_foto_procesada") != archivo.file_id:
+            with st.spinner("Mirando tu refri…"):
+                try:
+                    marcar_desde_foto(archivo)
+                except n.ErrorIA as err:
+                    st.error(str(err))
+                    st.session_state["_foto_procesada"] = archivo.file_id
+                    return
+                except Exception:  # noqa: BLE001
+                    st.error("No pude mirar la foto. Prueba con otra o marca los ingredientes a mano.")
+                    st.session_state["_foto_procesada"] = archivo.file_id
+                    return
+            st.session_state["_foto_procesada"] = archivo.file_id
+            st.rerun()
+        msg = st.session_state.pop("_foto_mensaje", None)
+        if msg:
+            st.success(msg)
+
+
 def _pintar_foto(r, f):
     usadas = st.session_state.setdefault("_fotos_usadas", {})   # una misma foto no se repite en dos recetas
     if f and usadas.setdefault(f["url"], r.nombre) != r.nombre:
@@ -347,6 +416,7 @@ def formulario():
     portada.hero()
     with st.container(border=True, key="tarjeta"):
         campo.algo_mas(c.SUGERENCIAS, "Añade un ingrediente…")
+        foto_refri()
         tiene = lo_que_tiene()
         st.markdown(f'<span class="rf-counter">{len(tiene)} ingrediente{'s' if len(tiene) != 1 else ''} seleccionado{'s' if len(tiene) != 1 else ''}</span>', unsafe_allow_html=True)
         portada.ingredientes()

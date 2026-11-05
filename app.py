@@ -170,7 +170,7 @@ def ingredientes_en_foto(datos: bytes, _sugerencias: tuple = ()) -> list[str]:
               "(sin cantidades, sin marcas, sin explicaciones). Si no hay ningún ingrediente, responde: ninguno")
     partes = [prompt, types.Part.from_bytes(data=datos, mime_type="image/jpeg")]
     resp = None
-    for modelo in (n.MODELO_PRINCIPAL, n.MODELO_RESPALDO):   # el mas reciente primero; el liviano de respaldo
+    for modelo in n.MODELOS_CASCADA:   # si la llave no tiene acceso a uno, prueba el siguiente
         try:
             resp = cliente.models.generate_content(model=modelo, contents=partes,
                                                    config=types.GenerateContentConfig(temperature=0.2))

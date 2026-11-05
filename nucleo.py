@@ -8,6 +8,7 @@ lista de compras en paquetes enteros y detecta lo que sobra.
 from __future__ import annotations
 
 import json
+import os
 import re
 import math
 import time
@@ -16,8 +17,12 @@ from dataclasses import dataclass, field
 
 from pydantic import BaseModel, Field
 
-MODELO_PRINCIPAL = "gemini-3.8-flash"
-MODELO_RESPALDO = "gemini-3.5-flash-lite"
+# Se pueden cambiar desde Railway sin tocar el código (variables MODELO_GEMINI / MODELO_GEMINI_RESPALDO).
+MODELO_PRINCIPAL = os.environ.get("MODELO_GEMINI", "gemini-3.8-flash")
+MODELO_RESPALDO = os.environ.get("MODELO_GEMINI_RESPALDO", "gemini-3.5-flash-lite")
+# Si un modelo no está habilitado para la llave (403/404), se intenta con el siguiente.
+MODELOS_CASCADA = (MODELO_PRINCIPAL, MODELO_RESPALDO, "gemini-3.1-flash-lite",
+                   "gemini-2.5-flash", "gemini-2.5-flash-lite")
 
 COCINAS = ["Ecuatoriana", "Italiana", "China", "Mexicana", "Peruana", "Mediterránea",
            "India", "Japonesa", "Tailandesa", "Árabe", "Colombiana", "Española"]
@@ -439,6 +444,7 @@ def llamar_gemini(cliente, prompt: str, esquema, modelos=(MODELO_PRINCIPAL, MODE
 
     ultimo_error: Exception | None = None
     usar_nivel = True
+    hubo_403 = False
     for modelo in modelos:
         for intento in range(reintentos + 1):
             try:
@@ -463,13 +469,15 @@ def llamar_gemini(cliente, prompt: str, esquema, modelos=(MODELO_PRINCIPAL, MODE
             except Exception as e:  # noqa: BLE001
                 ultimo_error = e
                 codigo = _codigo(e)
-                if codigo in (401, 403):
+                print(f"[gemini] {modelo}: {type(e).__name__}: {str(e)[:300]}", flush=True)
+                if codigo == 401:
                     raise ErrorIA("La clave de la IA no es válida. Revisa el secreto GEMINI_API_KEY.") from e
                 if codigo == 400 and usar_nivel and "think" in str(e).lower():
                     usar_nivel = False
                     continue
-                if codigo in (404, 429):
-                    break
+                if codigo in (403, 404, 429):
+                    hubo_403 = hubo_403 or codigo == 403
+                    break                     # ese modelo no sirve con esta llave: prueba el siguiente
                 if intento < reintentos:
                     time.sleep(3)
                     continue
@@ -477,9 +485,13 @@ def llamar_gemini(cliente, prompt: str, esquema, modelos=(MODELO_PRINCIPAL, MODE
     codigo = _codigo(ultimo_error) if ultimo_error else None
     if codigo == 429:
         raise ErrorIA("Se alcanzó el límite gratuito de consultas a la IA. Espera un minuto y vuelve a intentar.")
+    if hubo_403:
+        raise ErrorIA("La clave de Gemini no tiene permiso para esos modelos. Revisa en Google AI Studio que la "
+                      "llave tenga acceso a Gemini 3, o cámbialo en Railway con la variable MODELO_GEMINI.")
     if codigo and codigo >= 500:
         raise ErrorIA("El servicio de IA está saturado. Intenta de nuevo en unos minutos.")
-    raise ErrorIA("La IA no devolvió recetas válidas. Intenta de nuevo.")
+    detalle = f" ({type(ultimo_error).__name__}: {str(ultimo_error)[:160]})" if ultimo_error else ""
+    raise ErrorIA("La IA no devolvió recetas válidas" + detalle + ". Intenta de nuevo.")
 
 
 PROMPT_FOTO = """Mira la foto. ¿Muestra el plato "{plato}" ({busqueda}) YA PREPARADO Y SERVIDO, de forma que

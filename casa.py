@@ -243,7 +243,7 @@ def buscar_con_lo_que_hay(cliente, tiene: list[str], personas: int, tiempo: int,
         f_rec = ex.submit(lambda: [] if (categoria or creativo) else
                           recetas_del_recetario(cliente, tiene, personas, tiempo, dieta, basicos, excluir))
         f_ia = ex.submit(n.llamar_gemini, cliente, prompt, CatalogoCasa, razonamiento="minimal",
-                         modelos=(n.MODELO_RESPALDO, n.MODELO_PRINCIPAL))    # el liviano responde mucho más rápido
+                         modelos=n.MODELOS_CASCADA)    # el liviano responde mucho más rápido
         import time as _t
         t0 = _t.time()
         cero = f_rec.result()
@@ -278,7 +278,7 @@ def buscar_con_lo_que_hay(cliente, tiene: list[str], personas: int, tiempo: int,
                     "ingredientes exactos: " + ", ".join(tiene) + ". Si un plato deja alguno fuera, no lo incluyas.")
         try:
             cat2, _ = n.llamar_gemini(cliente, refuerzo, CatalogoCasa, razonamiento="minimal",
-                                      modelos=(n.MODELO_RESPALDO, n.MODELO_PRINCIPAL))
+                                      modelos=n.MODELOS_CASCADA)
         except n.ErrorIA:
             cat2 = None
         if cat2:
@@ -352,7 +352,7 @@ def recetas_del_recetario(cliente, tiene, personas, tiempo, dieta, basicos, excl
             return []
         prompt = PROMPT_MEALDB.format(personas=personas, tiene=", ".join(tiene),
                                       recetas="\n\n".join(mealdb.texto_para_ia(m) for m in platos))
-        cat, _ = n.llamar_gemini(cliente, prompt, CatalogoCasa, modelos=(n.MODELO_RESPALDO, n.MODELO_PRINCIPAL),
+        cat, _ = n.llamar_gemini(cliente, prompt, CatalogoCasa, modelos=n.MODELOS_CASCADA,
                                  razonamiento="minimal")      # traducir es fácil: el modelo liviano es más rápido
     except Exception as e:  # noqa: BLE001  (si el recetario falla, la IA propone como siempre)
         print(f"[mealdb] no se pudo usar: {e}", flush=True)

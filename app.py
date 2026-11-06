@@ -491,6 +491,53 @@ def buscar(mas=False):
     s["pedido"] = pedido
 
 
+_salto_recetas = st.components.v2.component(
+    "larefri_salto_recetas",
+    html='<div class="rf-ancla-recetas" aria-hidden="true"></div>',
+    css='.rf-ancla-recetas {height:1px;scroll-margin-top:80px;}',
+    js=r"""
+export default function({data, parentElement}) {
+    if (!data.activar || parentElement.__saltoRecetas === data.token) return;
+    const ancla = parentElement.querySelector('.rf-ancla-recetas');
+    if (!ancla) return;
+    let frame;
+    const primerFrame = requestAnimationFrame(() => {
+        frame = requestAnimationFrame(() => {
+            if (!ancla.isConnected) return;
+            parentElement.__saltoRecetas = data.token;
+            ancla.scrollIntoView({
+                behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+                block: 'start'
+            });
+        });
+    });
+    return () => {cancelAnimationFrame(primerFrame); if (frame) cancelAnimationFrame(frame);};
+}
+""",
+)
+
+
+def zona_recetas():
+    nueva = st.session_state.pop("_buscar_pendiente", False)
+    if not nueva and not st.session_state.get("pedido"):
+        return
+    if nueva:
+        st.session_state["_salto_recetas_token"] = time.time_ns()
+    # Reservar espacio permite bajar al inicio incluso antes de recibir recetas.
+    st.markdown('<style>.st-key-zona_recetas {min-height:75vh;}</style>', unsafe_allow_html=True)
+    with st.container(key="zona_recetas"):
+        _salto_recetas(key="salto_recetas", data={
+            "activar": nueva, "token": st.session_state.get("_salto_recetas_token", 0)})
+        st.subheader("Tus recetas")
+        if nueva:
+            try:
+                buscar()
+            except Exception as err:
+                st.error(str(n.error_gemini(err)))
+                return
+        resultados()
+
+
 def formulario():
     portada.hero()
     with st.container(border=True, key="tarjeta"):
@@ -513,18 +560,12 @@ def formulario():
         if col_normal.button("Vamos a cocinar!", icon=":material/soup_kitchen:", type="primary", width="stretch",
                              disabled=not tiene, key="buscar"):
             st.session_state["creativo"] = False
-            try:
-                buscar()
-            except n.ErrorIA as err:
-                st.error(str(err))
+            st.session_state["_buscar_pendiente"] = True
         if col_chef.button("Chef inteligente", icon=":material/auto_awesome:", width="stretch",
                            disabled=not tiene, key="buscar_chef",
                            help="Busca otras recetas conocidas con tus ingredientes. No inventa platos."):
             st.session_state["creativo"] = True
-            try:
-                buscar()
-            except n.ErrorIA as err:
-                st.error(str(err))
+            st.session_state["_buscar_pendiente"] = True
 
 
 def resultados():
@@ -602,10 +643,10 @@ d.aplicar_estilos()
 portada.estilos()
 portada.cabecera(d.isotipo_svg("#fff", 30))
 formulario()
+zona_recetas()
 diagnostico_gemini()
-resultados()
 st.divider()
-st.caption("Versión: IA-proteina-06")
+st.caption("Versión: IA-scroll-07")
 if os.environ.get("EDAMAM_APP_ID"):
     st.markdown('<div style="text-align:center;font-size:.8rem;color:#7A6A61">Recetas: TheMealDB · Spoonacular · '
                 '<a href="https://www.edamam.com/" target="_blank">Powered by Edamam</a></div>', unsafe_allow_html=True)

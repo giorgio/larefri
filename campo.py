@@ -1,35 +1,27 @@
-"""Campo "¿Algo más?": se escribe y la palabra se completa sola en el mismo campo.
-"""
+"""Campo "¿Algo más?": se escribe y la palabra se completa sola en el mismo campo (sin menú desplegable).
+Tab, Enter o → aceptan; cada ingrediente queda en su propio cuadrito con ✕. La coma o "y" separan."""
 
 from __future__ import annotations
 
 import streamlit as st
-import casa as c
 
 CSS = """
-@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600;700&display=swap');
-.caja { display:flex; flex-wrap:wrap; align-items:center; gap:.55rem; padding:.65rem .8rem; min-height:3.2rem;
-  background:#fff; border:1px solid #2143af; border-radius:16px; font-family:"DM Sans",sans-serif; box-sizing:border-box; }
-.caja:focus-within { box-shadow:0 0 0 3px #2143af18; }
-.chip { display:inline-flex; align-items:center; gap:.5rem; padding:.35rem .45rem .35rem .75rem;
-  border:1px solid #ff7658; border-radius:8px; background:#ffe9df; color:#253568;
-  font-family:"DM Sans",sans-serif; font-size:1rem; line-height:1.4; max-width:100%; overflow-wrap:anywhere;
-  box-sizing:border-box; animation:entra .2s ease-out; }
-.chip button { all:unset; cursor:pointer; flex-shrink:0; display:grid; place-items:center; color:#9f351e;
-  font-size:.9rem; width:30px; height:30px; border-radius:6px; font-family:sans-serif; }
-.chip button:hover {background:#ffd0bf;}
-.chip button:focus-visible {outline:1px solid #2143af;outline-offset:1px;}
-.escribe {position:relative; flex:1 1 12rem; min-width:0;}
-.escribe input, .escribe .fantasma {font-family:"DM Sans",sans-serif;font-size:1rem;color:#23396b;
-  padding:0;margin:0;border:none;outline:none;background:transparent;width:100%;letter-spacing:normal;line-height:2;}
-.escribe .fantasma {position:absolute;inset:0;pointer-events:none;white-space:pre;color:transparent;overflow:hidden;}
-.escribe .fantasma i {font-style:normal;color:#23396b;opacity:.35;}
-.escribe input::placeholder {color:#74809a;font-family:"DM Sans",sans-serif;font-size:1.15rem;}
-.aviso {width:100%;color:#a43b25;font-size:1rem;font-family:"DM Sans",sans-serif;}
-.aviso:empty {display:none;}
-@keyframes entra {from {transform:scale(.9);opacity:0;}to {transform:scale(1);opacity:1;}}
-@media(pointer:coarse) {.chip button {width:36px;height:36px;}.chip button:active {background:#ffd0bf;}}
-@media(prefers-reduced-motion:reduce) {.chip {animation:none;}}
+.caja { display:flex; flex-wrap:wrap; align-items:center; gap:.4rem; padding:.45rem .6rem; min-height:2.9rem;
+  background:transparent; border:none; border-bottom:2px solid #9DB7D5; font-family:'Caveat', cursive; }
+.chip { display:inline-flex; align-items:center; gap:.4rem; padding:.2rem .8rem; border:1px solid #FF7A1A;
+  border-radius:999px; background:#FFF4EB; color:#EE6A12; font-family:"DM Sans", "Source Sans Pro", sans-serif;
+  font-size:.95rem; line-height:1.4; animation: entra .25s ease-out; }
+.chip button { all:unset; cursor:pointer; color:#EE6A12; font-size:.8rem; line-height:1; padding:0 .1rem; font-family:sans-serif; }
+.chip button:hover { color:#C2410C; transform:scale(1.15); }
+.escribe { position:relative; flex:1 1 9rem; min-width:9rem; }
+.escribe input, .escribe .fantasma { font-family:'Caveat', cursive; font-size:1.45rem; color:#23396B;
+  padding:0; margin:0; border:none; outline:none; background:transparent; width:100%; letter-spacing:normal; }
+.escribe .fantasma { position:absolute; inset:0; pointer-events:none; white-space:pre; color:transparent; }
+.escribe .fantasma i { font-style:normal; color:#23396B; opacity:.35; }
+.escribe input::placeholder { color:#7C8FB0; opacity:.8; }
+.aviso { width:100%; font-family:'Caveat', cursive; color:#E2552B; font-size:1.15rem; min-height:0; }
+@keyframes entra { from { transform:scale(.6); opacity:0 } to { transform:scale(1); opacity:1 } }
+@media (prefers-reduced-motion: reduce) { .chip { animation:none } }
 """
 
 JS = r"""
@@ -50,7 +42,6 @@ export default function(component) {
   const aviso = root.querySelector(".aviso");
   const escribe = root.querySelector(".escribe");
   input.placeholder = data.placeholder || "";
-  input.setAttribute("aria-label", "Busca o añade ingredientes");
 
   const guardar = () => setStateValue("lista", root.__items.slice());
   const pintar = () => {
@@ -99,6 +90,7 @@ export default function(component) {
   };
 
   input.oninput = () => {
+    // espacio = como la coma, salvo que la palabra siga (p. ej. "carne " -> "Carne molida", "leche " -> "Leche de coco")
     if (/\S\s$/.test(input.value)) {
       const t = norm(input.value);
       const sigue = sug.some((s) => norm(s).startsWith(t + " "));
@@ -129,31 +121,17 @@ export default function(component) {
 }
 """
 
-_componente = None
-try:
-    if hasattr(st, "components") and hasattr(st.components, "v2"):
-        _componente = st.components.v2.component("larefri_algo_mas", html="", css=CSS, js=JS)
-except Exception:
-    _componente = None
+_componente = st.components.v2.component("larefri_algo_mas", html="", css=CSS, js=JS)
+
 
 def algo_mas(sugerencias: list[str], placeholder: str, key: str = "algo_mas") -> list[str]:
     previo = st.session_state.get(key + "_items", [])
-    if _componente is None:
-        texto = st.text_input("¿Algo más en tu cocina?", placeholder=placeholder, key=key+"_input")
-        if texto:
-            for p in c.separar_lista(texto):
-                if p not in previo:
-                    previo.append(p)
-            st.session_state[key + "_items"] = previo
-        return previo
-    try:
-        r = _componente(key=key, data={"sugerencias": sugerencias, "valor": previo, "placeholder": placeholder},
-                        default={"lista": previo}, on_lista_change=lambda: None)
-        items = list(getattr(r, "lista", None) or previo or [])
-        st.session_state[key + "_items"] = items
-        return items
-    except Exception:
-        return previo
+    r = _componente(key=key, data={"sugerencias": sugerencias, "valor": previo, "placeholder": placeholder},
+                    default={"lista": previo}, on_lista_change=lambda: None)
+    items = list(getattr(r, "lista", None) or previo or [])
+    st.session_state[key + "_items"] = items
+    return items
+
 
 _JS_FINAL = r"""
 export default function(component) {
@@ -167,6 +145,7 @@ export default function(component) {
     document.addEventListener("keydown", (e) => { if (/Page|Arrow|End| /.test(e.key)) window.__bajo = true; }, true); }
   let avisado = false;
   el.__obs = new IntersectionObserver((e) => {
+    // no cargar si hay una receta abierta (se cerraría) ni si la persona no ha bajado
     if (e[0].isIntersecting && !avisado && !document.querySelector('[role="dialog"]') && window.__bajo) {
       avisado = true; setTriggerValue("cargar", data.n);
     }
@@ -176,18 +155,10 @@ export default function(component) {
 }
 """
 
-_final = None
-try:
-    if hasattr(st, "components") and hasattr(st.components, "v2"):
-        _final = st.components.v2.component("larefri_final", html="", js=_JS_FINAL)
-except Exception:
-    _final = None
+_final = st.components.v2.component("larefri_final", html="", js=_JS_FINAL)
+
 
 def llego_al_final(n: int, key: str = "fin") -> bool:
-    if _final is None:
-        return False
-    try:
-        r = _final(key=key, data={"n": n}, on_cargar_change=lambda: None)
-        return bool(getattr(r, "cargar", None))
-    except Exception:
-        return False
+    """True cuando la persona bajó hasta el final de las recetas (para cargar más sin botón)."""
+    r = _final(key=key, data={"n": n}, on_cargar_change=lambda: None)
+    return bool(getattr(r, "cargar", None))

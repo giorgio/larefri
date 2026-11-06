@@ -252,34 +252,12 @@ PENDIENTES: list = []          # (hueco, receta): las fotos se ponen DESPUÉS de
 
 
 def mostrar_foto(r, despues: bool = False):
-    if despues:
-        hueco = st.empty()
-        with hueco.container():
-            d.foto_vacia()
-        PENDIENTES.append((hueco, r))
-        return
-    _pintar_foto(r, _buscar_foto(r))
+    f = _buscar_foto(r) or _imagen_ia(r)
+    _pintar_foto(r, f)
 
 
 def poner_fotos():
-    """Busca las fotos de todas las tarjetas a la vez (en paralelo) y las pone en su lugar."""
-    from concurrent.futures import ThreadPoolExecutor
-    from streamlit.runtime.scriptrunner import add_script_run_ctx, get_script_run_ctx
-    pend, ctx = list(PENDIENTES), get_script_run_ctx()
-    PENDIENTES.clear()
-    if not pend:
-        return
-
-    def una(r):
-        add_script_run_ctx(None, ctx)
-        return _buscar_foto(r) or _imagen_ia(r)       # sin foto real: la IA la crea
-    t0 = time.time()
-    with ThreadPoolExecutor(6) as ex:
-        fotos_ = list(ex.map(una, [r for _, r in pend]))
-    print(f"[tiempo] fotos: {time.time() - t0:.1f} s", flush=True)
-    for (hueco, r), f in zip(pend, fotos_):
-        with hueco.container():
-            _pintar_foto(r, f)
+    pass
 
 
 def ir(_pagina="inicio", *_):

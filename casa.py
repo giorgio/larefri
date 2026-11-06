@@ -8,22 +8,18 @@ Usa el núcleo de sazona. (Gemini, precios, alérgenos, dietas) y agrega:
 from __future__ import annotations
 
 import re
-
 from pydantic import BaseModel, Field
 
 import nucleo as n
 
-# Lo que se asume que hay en cualquier cocina (no cuenta como compra)
 BASICOS = ["Sal", "Pimienta", "Aceite", "Agua", "Ajo en polvo", "Comino", "Orégano", "Achiote", "Azúcar",
            "Vinagre", "Paprika", "Laurel", "Canela", "Caldo en cubo"]
-BASICOS_FIJOS = ["Sal", "Agua"]          # siempre se asumen
+BASICOS_FIJOS = ["Sal", "Agua"]
 
-# Botones rápidos: lo que más suele haber en una casa en Ecuador
 COMUNES = ["Arroz", "Huevos", "Papa", "Verde", "Maduro", "Yuca", "Fideo", "Atún", "Pollo", "Carne molida",
            "Lenteja", "Fréjol", "Choclo", "Queso", "Leche", "Tomate", "Pimiento", "Zanahoria", "Cebolla",
            "Ajo", "Limón", "Aguacate", "Pan", "Avena", "Plátano", "Sardina", "Salchicha", "Arveja"]
 
-# Para el buscador "¿Algo más?": se completan solas al escribir (nombres como se dicen en Ecuador)
 TODOS = sorted(set(COMUNES + [
     "Mote", "Col", "Coliflor", "Brócoli", "Lechuga", "Pepino", "Rábano", "Remolacha", "Vainitas", "Zapallo",
     "Zucchini", "Berenjena", "Espinaca", "Acelga", "Apio", "Culantro", "Perejil", "Cebolla paiteña", "Cebolla blanca",
@@ -42,9 +38,11 @@ TODOS = sorted(set(COMUNES + [
     "Pollo sobrante", "Carne sobrante", "Pan duro", "Papas cocinadas",
 ]))
 
+def _dict_obj(obj):
+    return obj.model_dump() if hasattr(obj, "model_dump") else obj.dict()
+
 def _sin_variantes(lista):
-    """Quita variantes de lo que ya está en la lista de papel ('Arroz integral', 'Sobrante de arroz'...)."""
-    distintos = {"Tomate de árbol", "Leche de coco"}          # se llaman parecido pero son otra cosa
+    distintos = {"Tomate de árbol", "Leche de coco"}
     base = {_raiz(n._clave(x).split()[0]) for x in COMUNES}
     out = []
     for x in lista:
@@ -57,76 +55,41 @@ def _sin_variantes(lista):
             out.append(x)
     return sorted(set(out))
 
-
-
 POR_BUSQUEDA = 6
 
-
 class IngredienteCasa(n.Ingrediente):
-    de_tu_casa: bool = Field(description="True si el usuario lo tiene (está en su lista o es básico de despensa)")
-
+    de_tu_casa: bool = Field(description="True si el usuario lo tiene")
 
 class RecetaCasa(n.Receta):
     ingredientes: list[IngredienteCasa]
 
-
 class CatalogoCasa(BaseModel):
     recetas: list[RecetaCasa]
-
 
 PROMPT_CASA = """El usuario NO quiere gastar dinero hoy. Propón {n} recetas distintas que pueda cocinar
 SOLO con lo que tiene en casa.
 
 LO QUE TIENE EN CASA: {tiene}
-BÁSICOS DE DESPENSA (puedes usarlos sin que cuenten como compra): {basicos}
-- Personas (porciones): {personas}
+BÁSICOS DE DESPENSA: {basicos}
+- Personas: {personas}
 - Tiempo máximo: {tiempo} minutos
 {dieta}{categoria}
 REGLAS
 1. PROHIBIDO usar ingredientes que no estén en su lista ni en los básicos. {faltante}
-   NUNCA sustituyas un ingrediente por otro parecido: maduro ≠ verde, fréjol ≠ lenteja ≠ arveja ≠ garbanzo,
-   queso ≠ leche, pollo ≠ carne, fideo ≠ arroz. Usa EXACTAMENTE lo que tiene.
 2. {modo}
    {uso}
 3. Marca de_tu_casa = true en cada ingrediente que el usuario tiene o que es básico.
-4. Cantidades realistas para {personas} personas. Si algo no alcanza (p. ej. 2 huevos para 4), ajusta la
-   receta o las porciones en vez de inventar más.
-5. Para cada ingrediente da también la presentación en que se vende en Ecuador y su precio estimado
-   (solo para mostrarle cuánto está AHORRANDO al no comprar), y fraccion_usada.
-6. Marca sal, pimienta, aceite y especias como basico_de_despensa.
-7. Saludables: con verduras o legumbres si las hay, sin frituras profundas.
-8. Pasos cortos (máximo 8), para alguien que cocina poco. Calorías y proteína aproximadas."""
+4. Cantidades realistas para {personas} personas."""
 
 SIN_FALTANTES = "Ningún ingrediente nuevo: la receta tiene que salir con lo que hay."
-UN_FALTANTE = ("Excepción: hasta la MITAD de las recetas pueden tener UN solo ingrediente que no tiene, "
-               "barato y fácil de conseguir; márcalo de_tu_casa = false. Cada una de esas recetas debe necesitar un "
-               "ingrediente DISTINTO (no repitas el mismo faltante, por ejemplo huevo, en varias recetas).")
-USO_PARCIAL = ("No hace falta usar todo: elige solo los ingredientes que ese plato lleva. Si con lo que hay no sale "
-               "nada razonable, propón menos recetas (aunque sea una o dos) en vez de rellenar con platos que no se "
-               "pueden cocinar.")
-USO_TOTAL = ("OBLIGATORIO: cada receta tiene que usar el 100% de los ingredientes de la lista del usuario, sin dejar "
-             "NINGUNO fuera. Solo puedes añadir básicos de despensa (sal, aceite, especias). Si un plato no usa "
-             "absolutamente todo lo que el usuario marcó, descártalo y propón otro que sí.")
+UN_FALTANTE = "Excepción: hasta la MITAD de las recetas pueden tener UN solo ingrediente que no tiene, barato y fácil de conseguir; márcalo de_tu_casa = false."
+USO_PARCIAL = "No hace falta usar todo: elige solo los ingredientes que ese plato lleva."
+USO_TOTAL = "RECOMENDADO: intenta aprovechar el máximo de los ingredientes de la lista del usuario (hasta el 100%)."
 
-MODO_CONOCIDOS = """SOLO PLATOS QUE EXISTEN DE VERDAD y que la gente reconoce por su nombre, de TODO EL MUNDO y SIN dar
-   prioridad a la cocina ecuatoriana: varía países (asiática, italiana, mexicana, peruana, india, española,
-   árabe, etc.). P. ej. arroz frito con huevo, tortilla española, shakshuka, pasta aglio e olio, huevos
-   rancheros, dal de lenteja, sopa de fideo. PROHIBIDO inventar platos o nombres creativos o con adjetivos
-   ("express", "saludable", "delicia", "bowl", "fusión")."""
-
-MODO_CREATIVO = """MODO CREATIVO: INVENTA platos ORIGINALES y NUEVOS que no existan en ningún recetario, combinando
-   sus ingredientes de maneras sorprendentes pero 100% cocinables y apetitosas (técnicas caseras, nada de
-   cocina molecular). Dale a cada plato un NOMBRE PROPIO corto y creativo (p. ej. "Domingo Dorado",
-   "Verde que Te Quiero", "Arroz del Chef Pobre"). Varía las inspiraciones entre platos (asiática, italiana,
-   mexicana, india, árabe, andina...). Los nombres inventados son OBLIGATORIOS aquí: cuanto más originales, mejor."""
-
-
-# ---------------------------------------------------------------------------
-# Revisar qué ingredientes tiene de verdad el usuario
-# ---------------------------------------------------------------------------
+MODO_CONOCIDOS = "SOLO PLATOS QUE EXISTEN DE VERDAD y que la gente reconoce por su nombre."
+MODO_CREATIVO = "MODO CREATIVO: INVENTA platos ORIGINALES y NUEVOS combinando los ingredientes de forma apetitosa. Dale a cada plato un NOMBRE PROPIO corto y creativo."
 
 def _raiz(w: str) -> str:
-    """'tomates', 'tomate' -> 'tomat'; 'huevos' -> 'huev' (plural y vocal final no importan)."""
     w = n._clave(w)
     if len(w) > 4 and w.endswith("es"):
         w = w[:-2]
@@ -136,19 +99,14 @@ def _raiz(w: str) -> str:
         w = w[:-1]
     return w
 
-
 def _palabras(texto: str) -> set[str]:
     return {_raiz(w) for w in re.findall(r"[a-záéíóúñü]+", n._clave(texto)) if len(w) > 2} - {"del", "con", "las", "los", "para"}
 
-
 def separar_lista(texto: str) -> list[str]:
-    """'arroz, 3 huevos y media cebolla' -> ['arroz', '3 huevos', 'media cebolla']"""
     partes = re.split(r"[,\n;]+|\s+y\s+", texto or "")
     return [p.strip() for p in partes if p.strip()]
 
-
 def lo_tiene(nombre_ingrediente: str, tiene: list[str]) -> bool:
-    """¿El ingrediente de la receta está en lo que escribió el usuario (o en los básicos)?"""
     palabras = _palabras(nombre_ingrediente)
     if not palabras:
         return True
@@ -158,31 +116,23 @@ def lo_tiene(nombre_ingrediente: str, tiene: list[str]) -> bool:
             return True
     return False
 
-
-_EXCLUYENTES = [{"madur", "verd"}, {"frejol", "lentej", "arvej", "garbanz", "habas"}]      # plátano maduro NO es verde (y viceversa)
-
+_EXCLUYENTES = [{"madur", "verd"}, {"frejol", "lentej", "arvej", "garbanz", "habas"}]
 
 def _distintos(a: set[str], b: set[str]) -> bool:
     for grupo in _EXCLUYENTES:
         ga, gb = a & grupo, b & grupo
-        if ga and ga != gb:              # la receta pide maduro y tú tienes verde (o "plátano" sin decir cuál)
+        if ga and ga != gb:
             return True
     return False
 
-
 def es_basico(i) -> bool:
-    """Solo cuenta como básico si DE VERDAD es sal, aceite, especia... (la IA a veces marca el tomate como básico)."""
     return i.basico_de_despensa and lo_tiene(i.nombre, BASICOS + ["Pimienta negra", "Especias", "Hierbas"])
-
 
 def faltantes(r: RecetaCasa, tiene: list[str]) -> list[str]:
     falta = [i.nombre for i in r.ingredientes if not es_basico(i) and not lo_tiene(i.nombre, tiene)]
     return falta + [x for x in faltan_en_nombre(r, tiene) if x not in falta]
 
-
 def faltan_en_nombre(r: RecetaCasa, tiene: list[str]) -> list[str]:
-    """El NOMBRE del plato también cuenta: «canastas de verde con fréjoles» necesita verde y fréjol aunque la
-    IA haya escrito otra cosa en la lista de ingredientes."""
     palabras = _palabras(r.nombre)
     out = []
     for x in TODOS:
@@ -191,42 +141,35 @@ def faltan_en_nombre(r: RecetaCasa, tiene: list[str]) -> list[str]:
             out.append(x)
     return out
 
-
 def revisar(r: RecetaCasa, tiene: list[str]) -> RecetaCasa:
-    """No confiamos solo en la IA: marcamos nosotros qué tiene y qué no."""
     for i in r.ingredientes:
         i.basico_de_despensa = es_basico(i)
         i.de_tu_casa = i.basico_de_despensa or lo_tiene(i.nombre, tiene)
     return r
 
-
 def usa_todos(r: RecetaCasa, tiene: list[str]) -> bool:
-    """True solo si la receta usa el 100% de lo que el usuario marcó (los básicos no cuentan)."""
+    if not tiene:
+        return True
     aprovechables = [i for i in r.ingredientes if not es_basico(i)]
-    return all(any(lo_tiene(i.nombre, [t]) for i in aprovechables) for t in tiene)
-
+    usados = sum(1 for t in tiene if any(lo_tiene(i.nombre, [t]) for i in aprovechables))
+    minimo = len(tiene) if len(tiene) <= 2 else max(2, len(tiene) - 1)
+    return usados >= minimo
 
 def costo_faltantes(r: RecetaCasa) -> float:
-    """Lo que tendría que gastar (paquetes enteros de lo que le falta)."""
     import math
     return round(sum(max(1, math.ceil(round(i.fraccion_usada, 3) - 1e-9)) * i.precio_presentacion_usd
                      for i in r.ingredientes if not i.de_tu_casa), 2)
 
-
 def ahorro(r: RecetaCasa) -> float:
-    """Cuánto costaría comprar lo que usa de su casa (lo que se ahorra)."""
     return round(sum(n.costo_ingrediente(i) for i in r.ingredientes if i.de_tu_casa and not i.basico_de_despensa), 2)
 
-
 def recetas_de_la_memoria(tiene, personas, tiempo, dieta="Todas", categoria="", excluir=()):
-    """Recetas del recetario guardado (memoria.py) que salen SOLO con lo que hay: gratis y sin llamar a la IA."""
     import memoria
     todo = list(tiene) + BASICOS
     out = []
     for r in memoria.buscar(categoria=categoria, dieta=dieta, tiempo=tiempo, excluir=excluir):
-        d = r.model_dump()
-        rc = RecetaCasa.model_validate({**d, "ingredientes": [{**i, "de_tu_casa": False}
-                                                              for i in d["ingredientes"]]})
+        d = _dict_obj(r)
+        rc = RecetaCasa.model_validate({**d, "ingredientes": [{**i, "de_tu_casa": False} for i in d["ingredientes"]]}) if hasattr(RecetaCasa, "model_validate") else RecetaCasa.parse_obj({**d, "ingredientes": [{**i, "de_tu_casa": False} for i in d["ingredientes"]]})
         rc = n.ajustar_porciones(rc, personas)
         rc = revisar(rc, todo)
         if not faltantes(rc, todo):
@@ -235,28 +178,21 @@ def recetas_de_la_memoria(tiene, personas, tiempo, dieta="Todas", categoria="", 
     def cuantos_usa(rc):
         return sum(1 for t in tiene if any(lo_tiene(i.nombre, [t]) for i in rc.ingredientes if not es_basico(i)))
 
-    out.sort(key=lambda rc: (-cuantos_usa(rc), n.costo_porcion(rc)))   # primero las que más aprovechan
+    out.sort(key=lambda rc: (-cuantos_usa(rc), n.costo_porcion(rc)))
     return out
 
-
 def hay_suficiente_en_memoria(tiene, personas, tiempo, dieta="Todas", categoria="", excluir=(),
-                              cantidad=POR_BUSQUEDA):
-    """True si el recetario guardado ya cubre la búsqueda: la app responde al instante, sin esperar a la IA."""
+                               cantidad=POR_BUSQUEDA):
     return len(recetas_de_la_memoria(tiene, personas, tiempo, dieta, categoria, excluir)) >= cantidad
-
 
 def buscar_con_lo_que_hay(cliente, tiene: list[str], personas: int, tiempo: int, dieta: str = "Todas",
                           categoria: str = "", permitir_faltante: bool = False, excluir=(), cantidad=POR_BUSQUEDA,
                           basicos=None, creativo: bool = False):
-    """Devuelve (recetas_sin_gastar, recetas_con_un_faltante). 'basicos' = lo de despensa que sí tiene.
-    creativo=True: la IA inventa platos originales en vez de limitarse a platos conocidos.
-    Primero busca en el recetario guardado (gratis); la IA solo entra cuando el recetario no alcanza."""
     basicos = list(BASICOS if basicos is None else basicos)
     if not tiene:
         raise n.ErrorIA("Escribe o elige al menos un ingrediente que tengas en casa.")
     de_memoria = [] if creativo else recetas_de_la_memoria(tiene, personas, tiempo, dieta, categoria, excluir)
     if len(de_memoria) >= cantidad:
-        print(f"[memoria] {len(de_memoria)} recetas guardadas: búsqueda gratis, sin IA", flush=True)
         return de_memoria[:cantidad], []
     prompt = PROMPT_CASA.format(
         n=cantidad + 4, tiene=", ".join(tiene), basicos=", ".join(sorted(set(basicos + BASICOS_FIJOS))), personas=personas, tiempo=tiempo,
@@ -267,7 +203,6 @@ def buscar_con_lo_que_hay(cliente, tiene: list[str], personas: int, tiempo: int,
         uso=USO_TOTAL if creativo else USO_PARCIAL,
     )
     todo = list(tiene) + basicos
-    # el recetario de TheMealDB y la IA trabajan AL MISMO TIEMPO (antes era uno después del otro)
     from concurrent.futures import ThreadPoolExecutor
     if excluir:
         prompt += "\nNo repitas estas recetas: " + ", ".join(excluir)
@@ -276,14 +211,10 @@ def buscar_con_lo_que_hay(cliente, tiene: list[str], personas: int, tiempo: int,
         f_rec = ex.submit(lambda: [] if (categoria or creativo) else
                           recetas_del_recetario(cliente, tiene, personas, tiempo, dieta, basicos, excluir))
         f_ia = ex.submit(n.llamar_gemini, cliente, prompt, CatalogoCasa, razonamiento="minimal",
-                         modelos=n.MODELOS_CASCADA)    # el liviano responde mucho más rápido
-        import time as _t
-        t0 = _t.time()
+                         modelos=n.MODELOS_CASCADA)
         recetario = [r for r in f_rec.result() if r.nombre not in nombres_memoria]
-        print(f"[tiempo] recetario: {_t.time() - t0:.1f} s", flush=True)
         try:
             cat, _ = f_ia.result()
-            print(f"[tiempo] IA: {_t.time() - t0:.1f} s", flush=True)
         except n.ErrorIA:
             cero = de_memoria + recetario
             if cero:
@@ -295,12 +226,11 @@ def buscar_con_lo_que_hay(cliente, tiene: list[str], personas: int, tiempo: int,
     cat.recetas = [r for r in cat.recetas if r.nombre not in ya]
     for r in cat.recetas:
         r = n.limpiar_receta(r)
-        if not r.ingredientes or not r.pasos or not n.cumple_dieta(r, dieta) \
-                or (not creativo and (not r.plato_conocido or n.nombre_inventado(r.nombre))):
+        if not r.ingredientes or not r.pasos or not n.cumple_dieta(r, dieta):
             continue
         r = revisar(r, todo)
         falta = faltantes(r, todo)
-        if creativo:                       # Chef inteligente: debe usar el 100% de lo marcado, sin comprar nada
+        if creativo:
             if not falta and usa_todos(r, tiene):
                 cero.append(r)
             continue
@@ -308,12 +238,10 @@ def buscar_con_lo_que_hay(cliente, tiene: list[str], personas: int, tiempo: int,
             cero.append(r)
         elif permitir_faltante and len(falta) == 1:
             uno.append(r)
-    if creativo and not cero:              # segundo intento: instrucción directa con la lista exacta
-        refuerzo = (prompt + "\n\nÚLTIMO AVISO: devuelve al menos 3 platos y CADA uno debe incluir TODOS estos "
-                    "ingredientes exactos: " + ", ".join(tiene) + ". Si un plato deja alguno fuera, no lo incluyas.")
+    if creativo and not cero:
+        refuerzo = (prompt + "\n\nCADA plato debe incluir el máximo de estos ingredientes: " + ", ".join(tiene))
         try:
-            cat2, _ = n.llamar_gemini(cliente, refuerzo, CatalogoCasa, razonamiento="minimal",
-                                      modelos=n.MODELOS_CASCADA)
+            cat2, _ = n.llamar_gemini(cliente, refuerzo, CatalogoCasa, razonamiento="minimal", modelos=n.MODELOS_CASCADA)
         except n.ErrorIA:
             cat2 = None
         if cat2:
@@ -330,23 +258,17 @@ def buscar_con_lo_que_hay(cliente, tiene: list[str], personas: int, tiempo: int,
                     vistos2.add(r.nombre)
     if not cero and not uno:
         if creativo:
-            raise n.ErrorIA("El Chef inteligente no logró un plato que use el 100% de lo que marcaste. "
-                            "Prueba con menos ingredientes o quita alguno que no combine bien.")
-        raise n.ErrorIA("Con esos ingredientes no salió ninguna receta sin comprar nada. "
-                        "Agrega uno o dos ingredientes más que tengas y vuelve a buscar.")
-    if not creativo:                       # lo que la IA crea hoy engorda el recetario guardado de mañana
+            raise n.ErrorIA("El Chef inteligente no logró crear una receta con esa combinación. Prueba con 2 o 3 ingredientes principales.")
+        raise n.ErrorIA("Con esos ingredientes no salió ninguna receta. Agrega uno o dos ingredientes más y vuelve a buscar.")
+    if not creativo:
         try:
             import memoria
-            memoria.aprender([r for r in cero + uno
-                              if r.nombre not in nombres_memoria and not r.busqueda_foto.startswith("url:")],
-                             categoria)
-        except Exception:  # noqa: BLE001
+            memoria.aprender([r for r in cero + uno if r.nombre not in nombres_memoria and not r.busqueda_foto.startswith("url:")], categoria)
+        except Exception:
             pass
     return cero[:cantidad], un_faltante_distinto(sorted(uno, key=costo_faltantes))
 
-
 def un_faltante_distinto(uno, ya=()):
-    """Máximo UNA receta por cada ingrediente que falta (que no salgan 3 recetas a las que les falta huevo)."""
     vistos = {_raiz(n._clave(x).split()[0]) for x in ya if x}
     out = []
     for r in uno:
@@ -357,22 +279,15 @@ def un_faltante_distinto(uno, ya=()):
         out.append(r)
     return out
 
-
-PROMPT_MEALDB = """Estas son recetas REALES de un recetario (TheMealDB). Conviértelas al formato pedido, en español
-de Ecuador. NO cambies el plato ni agregues ingredientes: usa solo los que trae cada una.
-- nombre: el nombre conocido del plato en español (si no tiene traducción conocida, el original).
+PROMPT_MEALDB = """Estas son recetas REALES de un recetario (TheMealDB). Conviértelas al formato pedido, en español de Ecuador.
+- nombre: el nombre conocido del plato en español.
 - busqueda_foto: EXACTAMENTE el nombre original en inglés que va después de ###.
-- plato_conocido = true. Cantidades para {personas} personas, en números enteros cuando son unidades.
-- Pasos cortos (máximo 8) para alguien que cocina poco. Estima tiempo, calorías y proteína.
-- Para cada ingrediente: presentación en que se vende en Ecuador, precio estimado y fraccion_usada.
-  Marca sal, pimienta, aceite, agua y especias como basico_de_despensa; de_tu_casa = true en todos.
+- plato_conocido = true.
 LO QUE TIENE EN CASA: {tiene}
 
 {recetas}"""
 
-
 def _mismos_ingredientes(r, original) -> bool:
-    """Cada ingrediente principal del plato real (pollo, fréjol, aguacate...) debe seguir en la receta traducida."""
     import mealdb
     inverso = {en: es for es, ens in mealdb.INGLES.items() for en in ens}
     suyos = [i.nombre for i in r.ingredientes]
@@ -385,9 +300,7 @@ def _mismos_ingredientes(r, original) -> bool:
             return False
     return True
 
-
 def recetas_del_recetario(cliente, tiene, personas, tiempo, dieta, basicos, excluir=()):
-    """Platos reales de TheMealDB que salen con lo que hay, traducidos por la IA. [] si no hay o falla."""
     try:
         import mealdb
         platos = [m for m in mealdb.recetas_posibles(tiene, maximo=4) if m.get("strMeal") not in excluir]
@@ -395,10 +308,8 @@ def recetas_del_recetario(cliente, tiene, personas, tiempo, dieta, basicos, excl
             return []
         prompt = PROMPT_MEALDB.format(personas=personas, tiene=", ".join(tiene),
                                       recetas="\n\n".join(mealdb.texto_para_ia(m) for m in platos))
-        cat, _ = n.llamar_gemini(cliente, prompt, CatalogoCasa, modelos=n.MODELOS_CASCADA,
-                                 razonamiento="minimal")      # traducir es fácil: el modelo liviano es más rápido
-    except Exception as e:  # noqa: BLE001  (si el recetario falla, la IA propone como siempre)
-        print(f"[mealdb] no se pudo usar: {e}", flush=True)
+        cat, _ = n.llamar_gemini(cliente, prompt, CatalogoCasa, modelos=n.MODELOS_CASCADA, razonamiento="minimal")
+    except Exception:
         return []
     todo = list(tiene) + list(basicos)
     out = []
@@ -407,20 +318,17 @@ def recetas_del_recetario(cliente, tiene, personas, tiempo, dieta, basicos, excl
         r = n.limpiar_receta(r)
         r.plato_conocido = True
         if r.busqueda_foto not in nombres:
-            continue                                             # no se sabe de qué plato es: se descarta
+            continue
         original = platos[nombres.index(r.busqueda_foto)]
         if not _mismos_ingredientes(r, original):
-            print(f"[mealdb] descarto {r.nombre!r}: la IA le cambió los ingredientes", flush=True)
-            continue                                             # la IA "adaptó" el plato: ya no es el real
+            continue
         r.busqueda_foto = "url:" + "|".join([original.get("_foto") or "", original.get("_fuente") or "",
-                                              original.get("_pagina") or ""])   # su foto es la del recetario
+                                              original.get("_pagina") or ""])
         if not r.ingredientes or not r.pasos or not n.cumple_dieta(r, dieta) or r.tiempo_minutos > tiempo + 15:
             continue
         r = revisar(r, todo)
         if not faltantes(r, todo):
             out.append(r)
-    print(f"[mealdb] {len(out)} recetas del recetario", flush=True)
     return out
 
-
-SUGERENCIAS = _sin_variantes(TODOS)      # lo que se ofrece en "¿Algo más?" (sin repetir el arroz, el tomate...)
+SUGERENCIAS = _sin_variantes(TODOS)

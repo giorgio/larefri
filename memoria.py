@@ -21,12 +21,15 @@ _CARPETA = os.path.dirname(os.path.abspath(__file__))
 ARCHIVO_BASE = os.path.join(_CARPETA, "recetario.json")
 ARCHIVO_NUEVAS = os.path.join(_CARPETA, "recetario_nuevas.json")
 
-_cache: dict[str, tuple[float, list]] = {}     # ruta -> (fecha de modificación, [(Receta, categoria)])
+_cache: dict[str, tuple[float, list]] = {}
 _lock = threading.Lock()
 
+def _validar_receta(d: dict) -> n.Receta:
+    if hasattr(n.Receta, "model_validate"):
+        return n.Receta.model_validate(d)
+    return n.Receta.parse_obj(d)
 
 def _leer(ruta: str) -> list:
-    """Lee un recetario del disco (con caché: solo relee si el archivo cambió)."""
     try:
         mtime = os.path.getmtime(ruta)
     except OSError:
@@ -41,15 +44,14 @@ def _leer(ruta: str) -> list:
     out = []
     for e in datos.get("recetas", []):
         try:
-            out.append((n.Receta.model_validate(e["receta"]), e.get("categoria", "")))
-        except Exception:  # noqa: BLE001   (una receta mala no tumba las demás)
+            r_obj = _validar_receta(e["receta"])
+            out.append((r_obj, e.get("categoria", "")))
+        except Exception:
             continue
     _cache[ruta] = (mtime, out)
     return out
 
-
 def todas() -> list:
-    """Base + aprendidas, sin nombres repetidos (si se repite, gana la del recetario base)."""
     vistos, out = set(), []
     for ruta in (ARCHIVO_BASE, ARCHIVO_NUEVAS):
         for r, cat in _leer(ruta):
@@ -59,10 +61,8 @@ def todas() -> list:
             out.append((r, cat))
     return out
 
-
 def buscar(cocina: str = "", categoria: str = "", dieta: str = "Todas", max_porcion: float | None = None,
            tiempo: int | None = None, excluir=(), cantidad: int | None = None) -> list:
-    """Recetas guardadas que cumplen los filtros, ordenadas de más barata a más cara por porción."""
     ex = {n._clave(x) for x in excluir}
     out = []
     for r, cat in todas():
@@ -82,18 +82,14 @@ def buscar(cocina: str = "", categoria: str = "", dieta: str = "Todas", max_porc
     out.sort(key=n.costo_porcion)
     return out[:cantidad] if cantidad else out
 
-
 def muestra_diaria(dia: str, cantidad: int, **filtros) -> list:
-    """Una selección barajada del recetario: igual durante todo el día, distinta al día siguiente."""
     clave = "|".join([dia, filtros.get("cocina", ""), filtros.get("categoria", ""), filtros.get("dieta", "")])
     semilla = int(hashlib.sha256(clave.encode("utf-8")).hexdigest(), 16)
     out = buscar(**filtros)
     random.Random(semilla).shuffle(out)
     return out[:cantidad]
 
-
 def aprender(recetas, categoria: str = "") -> None:
-    """Guarda recetas nuevas que creó la IA (mejor esfuerzo: si no se puede escribir, no pasa nada)."""
     if not recetas:
         return
     vistos = {r.nombre for r, _ in todas()}
@@ -102,9 +98,9 @@ def aprender(recetas, categoria: str = "") -> None:
         if r.nombre in vistos:
             continue
         vistos.add(r.nombre)
-        d = r.model_dump()
+        d = r.model_dump() if hasattr(r, "model_dump") else r.dict()
         for i in d.get("ingredientes", []):
-            i.pop("de_tu_casa", None)            # eso depende de cada usuario: no se guarda
+            i.pop("de_tu_casa", None)
         nuevas.append({"categoria": categoria, "receta": d})
     if not nuevas:
         return

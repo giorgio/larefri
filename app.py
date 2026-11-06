@@ -491,15 +491,18 @@ def resultados():
     total = len(cero) + len(uno)
     if st.session_state.get("sin_mas"):
         st.caption("Esas son todas las recetas que salen con lo que tienes.")
-    elif total < 30 and not st.session_state.get("abierta") and campo.llego_al_final(total, key=f"fin_{total}"):    # bajó hasta el final: cargar más
-        try:
-            antes = total
-            buscar(mas=True)
-            if len(st.session_state["cero"]) + len(st.session_state["uno"]) == antes:
+    elif total < 120:
+        st.write("")
+        col1, col2, col3 = st.columns([1, 2, 1])
+        if col2.button("Cargar más recetas 🍲", key=f"btn_mas_{total}", use_container_width=True):
+            try:
+                antes = total
+                buscar(mas=True)
+                if len(st.session_state["cero"]) + len(st.session_state["uno"]) == antes:
+                    st.session_state["sin_mas"] = True
+            except Exception:
                 st.session_state["sin_mas"] = True
-        except n.ErrorIA:
-            st.session_state["sin_mas"] = True
-        st.rerun()
+            st.rerun()
 
 
 st.session_state["_dialogo_puesto"] = False

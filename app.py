@@ -156,30 +156,25 @@ def _bloqueo_imagen():
 
 @st.cache_data(ttl=60 * 86400, show_spinner=False, max_entries=1000)
 def crear_imagen(plato: str, ingredientes: str) -> bytes:
-    """Serializa generaciones para evitar ráfagas y protege el contador local."""
-    def extraer(resp):
-        for candidato in getattr(resp, "candidates", None) or []:
-            for parte in getattr(getattr(candidato, "content", None), "parts", None) or []:
-                inline = getattr(parte, "inline_data", None)
-                datos = getattr(inline, "data", None)
-                if datos and str(getattr(inline, "mime_type", "")).startswith("image/"):
-                    return datos
-        raise n.ErrorIA("Gemini no devolvió una imagen. Prueba otro plato o revisa el acceso al modelo de imágenes.")
-    with _bloqueo_imagen():
-        cuenta = _creadas_hoy()
-        hoy = time.strftime("%Y-%m-%d")
-        if cuenta.get(hoy, 0) >= MAX_IMAGENES_DIA:
-            raise n.ErrorIA("Se alcanzó el límite local de 30 imágenes diarias de esta instancia.")
-        prompt = (f"Fotografía gastronómica realista, luz natural, plato servido, vista de 3/4: {plato}. "
-                  f"Solo estos ingredientes: {ingredientes}. Sin texto, personas ni ingredientes extra.")
-        datos, _ = n.generar_con_respaldo(cliente_gemini(), prompt, MODELOS_IMAGEN,
-            dict(response_modalities=["TEXT", "IMAGE"]), extraer, reintentos=0)
-        cuenta[hoy] = cuenta.get(hoy, 0) + 1
-        return datos
+    """Genera la foto del plato usando la IA (FLUX) cuando no hay foto real en Unsplash/Commons."""
+    import urllib.request
+    import urllib.parse
+    import random
+    
+    semilla = random.randint(1000, 999999)
+    prompt = f"Ecuadorian food dish {plato}, prepared with {ingredientes}, realistic food photography, high resolution, 3/4 angle, delicious presentation"
+    prompt_encoded = urllib.parse.quote(prompt)
+    
+    url = f"https://image.pollinations.ai/prompt/{prompt_encoded}?seed={semilla}&width=768&height=512&nologo=true"
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+    
+    peticion = urllib.request.Request(url, headers=headers)
+    with urllib.request.urlopen(peticion, timeout=30) as respuesta:
+        return respuesta.read()
 
 
 def _imagen_ia(r):
-    """Genera la foto del plato con Gemini cuando no hay foto real de Unsplash/Commons."""
+    """Genera la foto del plato con la IA (FLUX) cuando no hay foto real de Unsplash/Commons."""
     try:
         ings = ", ".join(
             i.nombre for i in r.ingredientes if not getattr(i, "basico_de_despensa", False)
@@ -191,8 +186,8 @@ def _imagen_ia(r):
         b64 = base64.b64encode(datos).decode("ascii")
         return {
             "url": f"data:{n.mime_imagen(datos)};base64,{b64}",
-            "fuente": "IA",
-            "autor": "Gemini",
+            "fuente": "IA (FLUX)",
+            "autor": "Generador de imágenes",
             "pagina": "",
             "licencia": "",
             "licencia_url": "",

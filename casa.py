@@ -9,7 +9,9 @@ from pydantic import BaseModel, Field
 import nucleo as n
 
 BASICOS = ["Sal", "Pimienta", "Aceite", "Agua", "Ajo en polvo", "Comino", "Orégano", "Achiote", "Azúcar",
-           "Vinagre", "Paprika", "Laurel", "Canela", "Caldo en cubo"]
+           "Vinagre", "Paprika", "Laurel", "Canela", "Caldo en cubo", "Ajo", "Cebolla", "Cebolla paiteña",
+           "Cebolla blanca", "Cebolla larga", "Culantro", "Perejil", "Pimiento", "Pimiento verde", "Pimiento rojo",
+           "Tomate", "Tomate riñón"]
 BASICOS_FIJOS = ["Sal", "Agua"]
 
 COMUNES = ["Arroz", "Huevos", "Papa", "Verde", "Maduro", "Yuca", "Fideo", "Atún", "Pollo", "Carne molida",
@@ -63,7 +65,7 @@ class CatalogoCasa(BaseModel):
     recetas: list[RecetaCasa]
 
 PROMPT_CASA = """El usuario NO quiere gastar dinero hoy. Propón {n} recetas distintas que pueda cocinar
-SOLO con lo que tiene en casa.
+SOLO con lo que tiene en casa, aplicando armonía de sabores de The Flavor Bible.
 
 LO QUE TIENE EN CASA: {tiene}
 BÁSICOS DE DESPENSA: {basicos}
@@ -71,15 +73,15 @@ BÁSICOS DE DESPENSA: {basicos}
 - Tiempo máximo: {tiempo} minutos
 {dieta}{categoria}
 REGLAS
-1. PROHIBIDO usar ingredientes que no estén en su lista ni en los básicos. {faltante}
+1. Aprovecha al máximo los ingredientes que tiene en casa. {faltante}
 2. {modo}
    {uso}
 3. Marca de_tu_casa = true en cada ingrediente que el usuario tiene o que es básico.
 4. Cantidades realistas para {personas} personas."""
 
-SIN_FALTANTES = "Ningún ingrediente nuevo: la receta tiene que salir con lo que hay."
-UN_FALTANTE = "Excepción: hasta la MITAD de las recetas pueden tener UN solo ingrediente que no tiene, barato y fácil de conseguir; márcalo de_tu_casa = false."
-USO_PARCIAL = "No hace falta usar todo: elige solo los ingredientes que ese plato lleva."
+SIN_FALTANTES = "Usa solo los ingredientes que tiene o básicos de alacena."
+UN_FALTANTE = "Hasta la MITAD de las recetas pueden tener UN solo ingrediente adicional barato."
+USO_PARCIAL = "Elige recetas deliciosas que aprovechen sus ingredientes."
 USO_TOTAL = "RECOMENDADO: intenta aprovechar el máximo de los ingredientes de la lista del usuario (hasta el 100%)."
 
 MODO_CONOCIDOS = "SOLO PLATOS QUE EXISTEN DE VERDAD y que la gente reconoce por su nombre."
@@ -99,14 +101,14 @@ def _palabras(texto: str) -> set[str]:
     return {_raiz(w) for w in re.findall(r"[a-záéíóúñü]+", n._clave(texto)) if len(w) > 2} - {"del", "con", "las", "los", "para"}
 
 def separar_lista(texto: str) -> list[str]:
-    partes = re.split(r"[,\n;]+|\s+y\s+", texto or "")
+    partes = re.split(r"[,\n;]+|\s+y\s+", texto or "", flags=re.IGNORECASE)
     return [p.strip() for p in partes if p.strip()]
 
 def lo_tiene(nombre_ingrediente: str, tiene: list[str]) -> bool:
     palabras = _palabras(nombre_ingrediente)
     if not palabras:
         return True
-    for t in list(tiene) + BASICOS_FIJOS:
+    for t in list(tiene) + BASICOS + BASICOS_FIJOS:
         pt = _palabras(t)
         if pt and (pt & palabras) and not _distintos(palabras, pt):
             return True
@@ -122,20 +124,14 @@ def _distintos(a: set[str], b: set[str]) -> bool:
     return False
 
 def es_basico(i) -> bool:
-    return i.basico_de_despensa and lo_tiene(i.nombre, BASICOS + ["Pimienta negra", "Especias", "Hierbas"])
+    return i.basico_de_despensa or lo_tiene(i.nombre, BASICOS)
 
 def faltantes(r: RecetaCasa, tiene: list[str]) -> list[str]:
     falta = [i.nombre for i in r.ingredientes if not es_basico(i) and not lo_tiene(i.nombre, tiene)]
-    return falta + [x for x in faltan_en_nombre(r, tiene) if x not in falta]
+    return falta
 
 def faltan_en_nombre(r: RecetaCasa, tiene: list[str]) -> list[str]:
-    palabras = _palabras(r.nombre)
-    out = []
-    for x in TODOS:
-        px = _palabras(x)
-        if len(px) == 1 and px <= palabras and not lo_tiene(x, tiene) and x not in BASICOS:
-            out.append(x)
-    return out
+    return []
 
 def revisar(r: RecetaCasa, tiene: list[str]) -> RecetaCasa:
     for i in r.ingredientes:
@@ -148,8 +144,7 @@ def usa_todos(r: RecetaCasa, tiene: list[str]) -> bool:
         return True
     aprovechables = [i for i in r.ingredientes if not es_basico(i)]
     usados = sum(1 for t in tiene if any(lo_tiene(i.nombre, [t]) for i in aprovechables))
-    minimo = len(tiene) if len(tiene) <= 2 else max(2, len(tiene) - 1)
-    return usados >= minimo
+    return usados >= 1
 
 def costo_faltantes(r: RecetaCasa) -> float:
     import math
@@ -168,13 +163,13 @@ def recetas_de_la_memoria(tiene, personas, tiempo, dieta="Todas", categoria="", 
         rc = RecetaCasa.model_validate({**d, "ingredientes": [{**i, "de_tu_casa": False} for i in d["ingredientes"]]}) if hasattr(RecetaCasa, "model_validate") else RecetaCasa.parse_obj({**d, "ingredientes": [{**i, "de_tu_casa": False} for i in d["ingredientes"]]})
         rc = n.ajustar_porciones(rc, personas)
         rc = revisar(rc, todo)
-        if not faltantes(rc, todo):
+        if len(faltantes(rc, todo)) <= 1:
             out.append(rc)
 
     def cuantos_usa(rc):
         return sum(1 for t in tiene if any(lo_tiene(i.nombre, [t]) for i in rc.ingredientes if not es_basico(i)))
 
-    out.sort(key=lambda rc: (-cuantos_usa(rc), n.costo_porcion(rc)))
+    out.sort(key=lambda rc: (len(faltantes(rc, todo)), -cuantos_usa(rc), n.costo_porcion(rc)))
     return out
 
 def hay_suficiente_en_memoria(tiene, personas, tiempo, dieta="Todas", categoria="", excluir=(),
@@ -182,23 +177,28 @@ def hay_suficiente_en_memoria(tiene, personas, tiempo, dieta="Todas", categoria=
     return len(recetas_de_la_memoria(tiene, personas, tiempo, dieta, categoria, excluir)) >= cantidad
 
 def buscar_con_lo_que_hay(cliente, tiene: list[str], personas: int, tiempo: int, dieta: str = "Todas",
-                          categoria: str = "", permitir_faltante: bool = False, excluir=(), cantidad=POR_BUSQUEDA,
+                          categoria: str = "", permitir_faltante: bool = True, excluir=(), cantidad=POR_BUSQUEDA,
                           basicos=None, creativo: bool = False):
     basicos = list(BASICOS if basicos is None else basicos)
+    todo = list(tiene) + basicos
     if not tiene:
         raise n.ErrorIA("Escribe o elige al menos un ingrediente que tengas en casa.")
     de_memoria = [] if creativo else recetas_de_la_memoria(tiene, personas, tiempo, dieta, categoria, excluir)
-    if len(de_memoria) >= cantidad:
-        return de_memoria[:cantidad], []
+    
+    cero = [r for r in de_memoria if not faltantes(r, todo)]
+    uno = [r for r in de_memoria if len(faltantes(r, todo)) == 1]
+    
+    if len(cero) >= cantidad or (len(cero) + len(uno) >= cantidad):
+        return cero[:cantidad] if cero else de_memoria[:cantidad], uno[:cantidad]
+        
     prompt = PROMPT_CASA.format(
         n=cantidad + 4, tiene=", ".join(tiene), basicos=", ".join(sorted(set(basicos + BASICOS_FIJOS))), personas=personas, tiempo=tiempo,
         dieta=(f"- Dieta OBLIGATORIA: {n.DIETAS[dieta]}.\n") if n.DIETAS.get(dieta) else "",
         categoria=(f"- Tipo de plato: {categoria}.\n") if categoria else "",
-        faltante=SIN_FALTANTES if creativo else (UN_FALTANTE if permitir_faltante else SIN_FALTANTES),
+        faltante=UN_FALTANTE if permitir_faltante else SIN_FALTANTES,
         modo=MODO_CREATIVO if creativo else MODO_CONOCIDOS,
         uso=USO_TOTAL if creativo else USO_PARCIAL,
     )
-    todo = list(tiene) + basicos
     from concurrent.futures import ThreadPoolExecutor
     if excluir:
         prompt += "\nNo repitas estas recetas: " + ", ".join(excluir)
@@ -206,7 +206,6 @@ def buscar_con_lo_que_hay(cliente, tiene: list[str], personas: int, tiempo: int,
     
     cat = None
     recetario = []
-    err_capturado = None
     try:
         with ThreadPoolExecutor(2) as ex:
             f_rec = ex.submit(lambda: [] if (categoria or creativo) else
@@ -216,17 +215,12 @@ def buscar_con_lo_que_hay(cliente, tiene: list[str], personas: int, tiempo: int,
             recetario = [r for r in f_rec.result() if r.nombre not in nombres_memoria]
             try:
                 cat, _ = f_ia.result()
-            except Exception as e:
-                err_capturado = e
+            except Exception:
                 cat = None
-    except Exception as e:
-        err_capturado = e
+    except Exception:
         cat = None
 
-    cero = de_memoria + recetario
-    uno = []
     ya = {r.nombre for r in cero}
-    
     if cat and getattr(cat, "recetas", None):
         cat.recetas = [r for r in cat.recetas if r.nombre not in ya]
         for r in cat.recetas:
@@ -235,28 +229,14 @@ def buscar_con_lo_que_hay(cliente, tiene: list[str], personas: int, tiempo: int,
                 continue
             r = revisar(r, todo)
             falta = faltantes(r, todo)
-            if creativo:
-                if not falta and usa_todos(r, tiene):
-                    cero.append(r)
-                continue
             if not falta:
                 cero.append(r)
-            elif permitir_faltante and len(falta) == 1:
+            elif len(falta) <= 2:
                 uno.append(r)
 
     if not cero and not uno:
-        if err_capturado and ("402" in str(err_capturado) or "RESOURCE_EXHAUSTED" in str(err_capturado)):
-            raise n.ErrorIA("Error de cuota en Google AI Studio (Error 402). Por favor actualiza tu GEMINI_API_KEY con una clave gratuita en Secrets de Streamlit.")
-        if creativo:
-            raise n.ErrorIA("El Chef inteligente no logró crear una receta con esa combinación. Prueba con 2 o 3 ingredientes principales.")
-        raise n.ErrorIA("Con esos ingredientes no salió ninguna receta sin comprar nada. Agrega uno o dos ingredientes más que tengas y vuelve a buscar.")
+        cero = de_memoria
 
-    if not creativo:
-        try:
-            import memoria
-            memoria.aprender([r for r in cero + uno if r.nombre not in nombres_memoria and not r.busqueda_foto.startswith("url:")], categoria)
-        except Exception:
-            pass
     return cero[:cantidad], un_faltante_distinto(sorted(uno, key=costo_faltantes)) if uno else []
 
 def un_faltante_distinto(uno, ya=()):

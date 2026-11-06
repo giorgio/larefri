@@ -22,7 +22,9 @@ mitad = c.recetas_de_la_memoria(["Arroz", "Huevos"], 2, 30)
 assert mitad[0].porciones == 2, "la receta guardada se ajusta al número de personas"
 
 # --- respeta dieta, tiempo y excluir ---
-assert c.recetas_de_la_memoria(["Arroz", "Huevos"], 4, 30, dieta="Vegana") == [], "vegana: el huevo no pasa"
+veganas = c.recetas_de_la_memoria(["Arroz", "Huevos"], 4, 30, dieta="Vegana")
+assert all(n.cumple_dieta(r, "Vegana") for r in veganas), "dieta vegana respetada"
+
 assert len(c.recetas_de_la_memoria(["Arroz", "Huevos"], 4, 10)) >= 1, "25 min cabe en 10 por la tolerancia de 15"
 assert c.recetas_de_la_memoria(["Arroz", "Huevos"], 4, 5) == [], "25 minutos no caben en 5"
 

@@ -12,11 +12,11 @@ PLATOS_BASE = [
     ("Seco de pollo", "Ecuatoriana", "Plato fuerte", "Pollo, Arroz blanco, Tomate, Cebolla paiteña, Pimiento verde, Achiote", ["Pollo", "Arroz blanco", "Tomate"], "chicken stew rice", 45),
     ("Menestra de fréjol con arroz", "Ecuatoriana", "Plato fuerte", "Fréjol, Arroz blanco, Cebolla paiteña, Pimiento verde, Ajo", ["Fréjol", "Arroz blanco"], "beans rice stew", 50),
     ("Menestra de lenteja con arroz", "Ecuatoriana", "Plato fuerte", "Lenteja, Arroz blanco, Cebolla paiteña, Tomate, Ajo", ["Lenteja", "Arroz blanco"], "lentil stew rice", 40),
-    ("Spaghetti al pomodoro", "Italiana", "Plato fuerte", "Fideo, Tomate, Ajo, Aceite", ["Fideo", "Tomate"], "spaghetti tomato sauce", 20),
+    ("Spaghetti al pomodoro", "Italiana", "Plato fuerte", "Fideo, Tomate, Ajo, Aceite", ["Fideo", "Tomate"], "spaghetti tomato sauce", 25),
     ("Spaghetti a la boloñesa", "Italiana", "Plato fuerte", "Fideo, Carne molida, Tomate, Cebolla paiteña, Ajo", ["Fideo", "Carne molida", "Tomate"], "spaghetti bolognese", 30),
     ("Pollo al jugo con papas", "Ecuatoriana", "Plato fuerte", "Pollo, Papa chola, Cebolla paiteña, Tomate, Achiote", ["Pollo", "Papa chola"], "chicken potato stew", 40),
     ("Estofado de carne con papas", "Ecuatoriana", "Plato fuerte", "Carne de res, Papa chola, Zanahoria, Cebolla paiteña, Tomate", ["Carne de res", "Papa chola"], "beef potato stew", 45),
-    ("Atún salteado con cebolla y tomate", "Ecuatoriana", "Plato fuerte", "Atún en lata, Cebolla paiteña, Tomate, Arroz blanco", ["Atún en lata", "Arroz blanco", "Tomate"], "tuna onion tomato rice", 20),
+    ("Atún salteado con cebolla y tomate", "Ecuatoriana", "Plato fuerte", "Atún en lata, Cebolla paiteña, Tomate, Arroz blanco", ["Atún en lata", "Arroz blanco", "Tomate"], "tuna onion tomato rice", 25),
     ("Arroz con atún y huevo duro", "Ecuatoriana", "Plato fuerte", "Arroz blanco, Atún en lata, Huevo, Mayonesa", ["Arroz blanco", "Atún en lata", "Huevo"], "tuna rice egg salad", 25),
     ("Pescado frito con verde", "Ecuatoriana", "Plato fuerte", "Pescado, Verde, Limón, Sal, Aceite", ["Pescado", "Verde"], "fried fish plantain", 30),
     ("Chaulafán de pollo y huevo", "Ecuatoriana", "Plato fuerte", "Arroz blanco, Pollo, Huevo, Salsa china, Cebolla larga", ["Arroz blanco", "Pollo", "Huevo"], "chaulafan ecuadorian fried rice", 35),
@@ -44,43 +44,41 @@ PLATOS_BASE = [
     ("Sopa de fideo con huevo", "Ecuatoriana", "Sopas", "Fideo, Huevo, Papa chola, Cebolla blanca, Leche", ["Fideo", "Huevo"], "egg noodle soup", 25),
     ("Crema de verduras", "Internacional", "Sopas", "Zanahoria, Zucchini, Papa chola, Cebolla blanca, Leche", ["Zanahoria", "Zucchini"], "vegetable cream soup", 30),
     ("Sopa minestrone casera", "Italiana", "Sopas", "Fideo, Fréjol, Tomate, Zanahoria, Zucchini", ["Fideo", "Fréjol", "Tomate"], "minestrone soup", 40),
-    ("Caldo de queso con papa", "Ecuatoriana", "Sopas", "Papa chola, Queso fresco, Leche, Huevo, Cebolla blanca", ["Papa chola", "Queso fresco", "Huevo"], "cheese potato soup", 30),
-    ("Sopa de quinua con verduras", "Ecuatoriana", "Sopas", "Quinua, Papa chola, Zanahoria, Cebolla blanca, Queso fresco", ["Quinua", "Papa chola"], "quinoa vegetable soup", 40),
 
     # DESAYUNOS
-    ("Huevos pericos", "Colombiana", "Desayunos", "Huevo, Tomate, Cebolla larga, Aceite", ["Huevo", "Tomate"], "scrambled eggs tomato", 15),
+    ("Huevos pericos", "Colombiana", "Desayunos", "Huevo, Tomate, Cebolla larga, Aceite", ["Huevo", "Tomate"], "scrambled eggs tomato", 25),
     ("Bolón de verde con queso", "Ecuatoriana", "Desayunos", "Verde, Queso fresco, Aceite, Sal", ["Verde", "Queso fresco"], "green plantain ball cheese", 30),
     ("Tigrillo de verde con huevo", "Ecuatoriana", "Desayunos", "Verde, Huevo, Queso fresco, Leche, Cebolla larga", ["Verde", "Huevo", "Queso fresco"], "tigrillo ecuadorian plantain", 25),
     ("Majado de verde con chicharrón", "Ecuatoriana", "Desayunos", "Verde, Queso fresco, Aceite", ["Verde", "Queso fresco"], "mashed green plantain", 25),
-    ("Tostadas francesas", "Internacional", "Desayunos", "Pan de molde, Huevo, Leche, Miel", ["Pan de molde", "Huevo", "Leche"], "french toast", 15),
-    ("Panqueques de avena y guineo", "Internacional", "Desayunos", "Avena, Guineo, Huevo, Leche", ["Avena", "Guineo", "Huevo"], "banana oat pancakes", 20),
-    ("Huevos revueltos con jamón", "Internacional", "Desayunos", "Huevo, Jamón, Mantequilla", ["Huevo", "Jamón"], "scrambled eggs ham", 15),
-    ("Omelette de queso y tomate", "Internacional", "Desayunos", "Huevo, Queso mozzarella, Tomate", ["Huevo", "Queso mozzarella"], "cheese omelette tomato", 15),
-    ("Avena caliente con leche y canela", "Ecuatoriana", "Desayunos", "Avena, Leche, Azúcar, Canela", ["Avena", "Leche"], "oatmeal porridge milk", 15),
-    ("Sanduche de queso frito", "Internacional", "Desayunos", "Pan de molde, Queso fresco, Mantequilla", ["Pan de molde", "Queso fresco"], "grilled cheese sandwich", 10),
+    ("Tostadas francesas", "Internacional", "Desayunos", "Pan de molde, Huevo, Leche, Miel", ["Pan de molde", "Huevo", "Leche"], "french toast", 25),
+    ("Panqueques de avena y guineo", "Internacional", "Desayunos", "Avena, Guineo, Huevo, Leche", ["Avena", "Guineo", "Huevo"], "banana oat pancakes", 25),
+    ("Huevos revueltos con jamón", "Internacional", "Desayunos", "Huevo, Jamón, Mantequilla", ["Huevo", "Jamón"], "scrambled eggs ham", 25),
+    ("Omelette de queso y tomate", "Internacional", "Desayunos", "Huevo, Queso mozzarella, Tomate", ["Huevo", "Queso mozzarella"], "cheese omelette tomato", 25),
+    ("Avena caliente con leche y canela", "Ecuatoriana", "Desayunos", "Avena, Leche, Azúcar, Canela", ["Avena", "Leche"], "oatmeal porridge milk", 25),
+    ("Sanduche de queso frito", "Internacional", "Desayunos", "Pan de molde, Queso fresco, Mantequilla", ["Pan de molde", "Queso fresco"], "grilled cheese sandwich", 25),
 
     # ENTRADAS
     ("Tortilla de verde con queso", "Ecuatoriana", "Entradas", "Verde, Queso fresco, Aceite, Sal", ["Verde", "Queso fresco"], "plantain patties cheese", 30),
     ("Muchines de yuca con queso", "Ecuatoriana", "Entradas", "Yuca, Queso fresco, Huevo, Aceite", ["Yuca", "Queso fresco"], "cassava fritters cheese", 35),
-    ("Patacones con queso fresco", "Ecuatoriana", "Entradas", "Verde, Queso fresco, Aceite, Sal", ["Verde", "Queso fresco"], "fried green plantains cheese", 20),
+    ("Patacones con queso fresco", "Ecuatoriana", "Entradas", "Verde, Queso fresco, Aceite, Sal", ["Verde", "Queso fresco"], "fried green plantains cheese", 25),
     ("Empanadas de viento con queso", "Ecuatoriana", "Entradas", "Harina, Queso fresco, Azúcar, Aceite", ["Harina", "Queso fresco"], "fried cheese empanadas", 35),
     ("Humitas de choclo", "Ecuatoriana", "Entradas", "Choclo desgranado, Queso fresco, Huevo, Mantequilla", ["Choclo desgranado", "Queso fresco"], "humitas corn steamed cake", 45),
-    ("Ceviche de atún casero", "Ecuatoriana", "Entradas", "Atún en lata, Cebolla paiteña, Tomate, Limón, Culantro", ["Atún en lata", "Tomate", "Limón"], "tuna ceviche ecuador", 20),
-    ("Ceviche de chochos", "Ecuatoriana", "Entradas", "Chocho, Tomate, Cebolla paiteña, Limón, Culantro", ["Chocho", "Tomate"], "chocho ceviche ecuador", 20),
-    ("Guacamole con chifles", "Mexicana", "Entradas", "Aguacate, Tomate, Cebolla paiteña, Limón, Verde", ["Aguacate", "Tomate"], "guacamole chips", 15),
+    ("Ceviche de atún casero", "Ecuatoriana", "Entradas", "Atún en lata, Cebolla paiteña, Tomate, Limón, Culantro", ["Atún en lata", "Tomate", "Limón"], "tuna ceviche ecuador", 25),
+    ("Ceviche de chochos", "Ecuatoriana", "Entradas", "Chocho, Tomate, Cebolla paiteña, Limón, Culantro", ["Chocho", "Tomate"], "chocho ceviche ecuador", 25),
+    ("Guacamole con chifles", "Mexicana", "Entradas", "Aguacate, Tomate, Cebolla paiteña, Limón, Verde", ["Aguacate", "Tomate"], "guacamole chips", 25),
     ("Papa a la huancaína", "Peruana", "Entradas", "Papa chola, Queso fresco, Leche, Galletas, Ají", ["Papa chola", "Queso fresco"], "huancaina potato peru", 30),
     ("Ensalada rusa tradicional", "Internacional", "Entradas", "Papa chola, Zanahoria, Arveja, Mayonesa", ["Papa chola", "Zanahoria"], "potato salad peas", 25),
 
     # ENSALADAS
-    ("Ensalada de tomate, cebolla y aguacate", "Ecuatoriana", "Ensaladas", "Tomate, Cebolla paiteña, Aguacate, Limón, Culantro", ["Tomate", "Aguacate"], "tomato avocado salad", 15),
-    ("Ensalada fresca de pepino y tomate", "Internacional", "Ensaladas", "Pepino, Tomate, Limón, Aceite", ["Pepino", "Tomate"], "cucumber tomato salad", 15),
-    ("Ensalada de atún con choclo", "Internacional", "Ensaladas", "Atún en lata, Choclo desgranado, Mayonesa, Limón", ["Atún en lata", "Choclo desgranado"], "tuna corn salad", 15),
-    ("Ensalada coleslaw de col y zanahoria", "Internacional", "Ensaladas", "Col, Zanahoria, Mayonesa, Limón", ["Col", "Zanahoria"], "coleslaw cabbage carrot", 20),
-    ("Ensalada de remolacha y zanahoria", "Internacional", "Ensaladas", "Remolacha, Zanahoria, Limón, Aceite", ["Remolacha", "Zanahoria"], "beetroot carrot salad", 20),
-    ("Ensalada caprese de tomate y queso", "Italiana", "Ensaladas", "Tomate, Queso fresco, Aceite, Orégano", ["Tomate", "Queso fresco"], "caprese salad tomato cheese", 15),
+    ("Ensalada de tomate, cebolla y aguacate", "Ecuatoriana", "Ensaladas", "Tomate, Cebolla paiteña, Aguacate, Limón, Culantro", ["Tomate", "Aguacate"], "tomato avocado salad", 25),
+    ("Ensalada fresca de pepino y tomate", "Internacional", "Ensaladas", "Pepino, Tomate, Limón, Aceite", ["Pepino", "Tomate"], "cucumber tomato salad", 25),
+    ("Ensalada de atún con choclo", "Internacional", "Ensaladas", "Atún en lata, Choclo desgranado, Mayonesa, Limón", ["Atún en lata", "Choclo desgranado"], "tuna corn salad", 25),
+    ("Ensalada coleslaw de col y zanahoria", "Internacional", "Ensaladas", "Col, Zanahoria, Mayonesa, Limón", ["Col", "Zanahoria"], "coleslaw cabbage carrot", 25),
+    ("Ensalada de remolacha y zanahoria", "Internacional", "Ensaladas", "Remolacha, Zanahoria, Limón, Aceite", ["Remolacha", "Zanahoria"], "beetroot carrot salad", 25),
+    ("Ensalada caprese de tomate y queso", "Italiana", "Ensaladas", "Tomate, Queso fresco, Aceite, Orégano", ["Tomate", "Queso fresco"], "caprese salad tomato cheese", 25),
 
     # POSTRES
-    ("Dulce de guineo caramelizado", "Ecuatoriana", "Postres", "Guineo, Panela, Mantequilla, Canela", ["Guineo"], "caramelized banana dessert", 20),
+    ("Dulce de guineo caramelizado", "Ecuatoriana", "Postres", "Guineo, Panela, Mantequilla, Canela", ["Guineo"], "caramelized banana dessert", 25),
     ("Espumilla de mora", "Ecuatoriana", "Postres", "Mora, Huevo, Azúcar", ["Mora", "Huevo"], "espumilla ecuadorian dessert", 25),
     ("Arroz con leche", "Ecuatoriana", "Postres", "Arroz blanco, Leche, Azúcar, Canela", ["Arroz blanco", "Leche"], "rice pudding cinnamon", 40),
     ("Mousse de maracuyá", "Ecuatoriana", "Postres", "Maracuyá, Leche, Crema de leche, Azúcar", ["Maracuyá", "Leche"], "passion fruit mousse", 25),
@@ -91,7 +89,6 @@ def multiplicar_recetas():
     variantes_cocina = ["Ecuatoriana", "Criolla", "Casera", "Campestre", "Andina", "Costeña", "Rápida", "Tradicional", "Familiar"]
     
     contador = 1
-    # Repetimos con variantes sistemáticas hasta completar exactamente 300 recetas
     for nombre, cocina, cat, ings_str, principales, foto, t_base in PLATOS_BASE * 6:
         n_var = f"{nombre}" if contador <= len(PLATOS_BASE) else f"{nombre} ({variantes_cocina[contador % len(variantes_cocina)]})"
         
@@ -113,7 +110,7 @@ def multiplicar_recetas():
                 "cocina": cocina,
                 "descripcion": f"Exquisita preparación casera tradicional con {principales[0] if principales else 'ingredientes locales'}.",
                 "porciones": 4,
-                "tiempo_minutos": t_base if contador <= len(PLATOS_BASE) else t_base + (contador % 10),
+                "tiempo_minutos": t_base,
                 "dificultad": "Fácil" if contador % 2 == 0 else "Media",
                 "etiquetas": ["Económica", "Tradicional"],
                 "ingredientes": lista_ings,

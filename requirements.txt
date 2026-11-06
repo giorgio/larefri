@@ -1,4 +1,4 @@
-streamlit
-google-genai
-pydantic
-requests
+streamlit>=1.50
+google-genai>=2.0
+pydantic>=2.7
+requests>=2.31

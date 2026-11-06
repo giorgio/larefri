@@ -73,13 +73,15 @@ def secreto(nombre):
 def cliente_gemini():
     import os
     clave = str(
-        st.session_state.get("gemini_key_manual") or
         secreto("GEMINI_API_KEY") or
+        secreto("gemini_api_key") or
         secreto("GOOGLE_API_KEY") or
-        os.environ.get("GEMINI_API_KEY", "")
+        secreto("google_api_key") or
+        os.environ.get("GEMINI_API_KEY", "") or
+        os.environ.get("GOOGLE_API_KEY", "")
     ).strip().strip('"\'')
     if not clave:
-        raise n.ErrorIA("Falta GEMINI_API_KEY en .streamlit/secrets.toml o Variables de entorno de Railway. Agrega tu clave para buscar recetas.")
+        raise n.ErrorIA("Falta la clave GEMINI_API_KEY en .streamlit/secrets.toml. Revisa que el archivo .streamlit/secrets.toml contenga: GEMINI_API_KEY = \"tu_clave\".")
     from google import genai
     return genai.Client(api_key=clave)
 
@@ -150,19 +152,30 @@ def _bloqueo_imagen():
 
 @st.cache_data(ttl=60 * 86400, show_spinner=False, max_entries=1000)
 def crear_imagen(plato: str, ingredientes: str) -> bytes:
-    """Genera la foto del plato usando la API de FLUX.1 [dev] en Hugging Face."""
-    import io
-    from huggingface_hub import InferenceClient
+    """Genera la foto exacta del plato usando el generador de imágenes FLUX con reintentos."""
+    import urllib.request
+    import urllib.parse
+    import random
+    import time
     
-    token = str(secreto("HF_TOKEN") or "hf_RvsVEmasyCwshNdPUYUmqdcqSLN0pcBUS").strip()
-    cliente = InferenceClient("black-forest-labs/FLUX.1-schnell", token=token)
+    semilla = random.randint(1000, 999999)
+    prompt = f"Appetizing food dish {plato}, cooked with {ingredientes}, realistic food photography, high resolution, 3/4 angle, delicious presentation"
+    prompt_encoded = urllib.parse.quote(prompt)
     
-    prompt = f"Appetizing gourmet food dish {plato}, cooked with {ingredientes}, realistic food photography, high resolution, 3/4 angle, delicious presentation"
+    url = f"https://image.pollinations.ai/prompt/{prompt_encoded}?seed={semilla}&width=512&height=512&nologo=true"
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
     
-    imagen = cliente.text_to_image(prompt)
-    buf = io.BytesIO()
-    imagen.save(buf, format="PNG")
-    return buf.getvalue()
+    for intento in range(3):
+        try:
+            peticion = urllib.request.Request(url, headers=headers)
+            with urllib.request.urlopen(peticion, timeout=12) as respuesta:
+                datos = respuesta.read()
+                if datos and len(datos) > 1000:
+                    return datos
+        except Exception:
+            time.sleep(0.4)
+            
+    raise Exception("Error temporal al generar foto de receta")
 
 
 def _imagen_ia(r):
@@ -503,6 +516,13 @@ export default function({data, parentElement}) {
 """,
 )
 
+
+
+# Permite ingresar la GEMINI_API_KEY directamente en la barra lateral si no esta configurada
+if not (secreto("GEMINI_API_KEY") or os.environ.get("GEMINI_API_KEY")):
+    with st.sidebar:
+        st.subheader("🔑 Clave de Gemini")
+        st.text_input("Ingresa tu GEMINI_API_KEY", type="password", key="gemini_key_input", help="Ingresa tu clave de Google Gemini para buscar recetas.")
 
 def zona_recetas():
     nueva = st.session_state.pop("_buscar_pendiente", False)

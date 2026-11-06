@@ -81,9 +81,12 @@ def cliente_gemini():
         os.environ.get("GOOGLE_API_KEY", "")
     ).strip().strip('"\'')
     if not clave:
-        raise n.ErrorIA("Falta la clave GEMINI_API_KEY en .streamlit/secrets.toml. Revisa que el archivo .streamlit/secrets.toml contenga: GEMINI_API_KEY = \"tu_clave\".")
-    from google import genai
-    return genai.Client(api_key=clave)
+        return None
+    try:
+        from google import genai
+        return genai.Client(api_key=clave)
+    except Exception:
+        return None
 
 
 def esperar_turno():

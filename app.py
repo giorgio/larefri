@@ -124,12 +124,10 @@ def foto(consulta: str, plato: str = "", version: int = 16):
 
 
 def _buscar_foto(r):
-    """Prioriza el generador de imágenes por IA sobre la búsqueda en Unsplash/Commons."""
+    """Prioriza el generador de imágenes libre sobre la búsqueda en Unsplash/Commons."""
     foto_generada = _imagen_ia(r)
     if foto_generada and not foto_generada.get("_error"):
         return foto_generada
-        
-    # Respaldo: si el generador falla, buscar foto libre real
     malas = _sin_foto_reciente()
     if time.time() - malas.get(r.busqueda_foto, 0) <= 3600:
         return None
@@ -162,7 +160,7 @@ def _bloqueo_imagen():
 
 @st.cache_data(ttl=60 * 86400, show_spinner=False, max_entries=1000)
 def crear_imagen(plato: str, ingredientes: str) -> bytes:
-    """Genera la foto del plato usando la IA (FLUX) cuando no hay foto real en Unsplash/Commons."""
+    """Genera la foto del plato usando la IA (FLUX) sin depender de claves de Gemini ni cobros."""
     import urllib.request
     import urllib.parse
     import random
@@ -180,7 +178,7 @@ def crear_imagen(plato: str, ingredientes: str) -> bytes:
 
 
 def _imagen_ia(r):
-    """Genera la foto del plato con la IA (FLUX) cuando no hay foto real de Unsplash/Commons."""
+    """Genera la foto del plato usando el generador libre sin Gemini ni costos."""
     try:
         ings = ", ".join(
             i.nombre for i in r.ingredientes if not getattr(i, "basico_de_despensa", False)
@@ -193,13 +191,16 @@ def _imagen_ia(r):
         return {
             "url": f"data:{n.mime_imagen(datos)};base64,{b64}",
             "fuente": "IA (FLUX)",
-            "autor": "Generador de imágenes",
+            "autor": "Generador libre de imágenes",
             "pagina": "",
             "licencia": "",
             "licencia_url": "",
         }
-    except Exception as e:  # noqa: BLE001
-        return {"_error": str(n.error_gemini(e))}
+    except Exception:
+        try:
+            return fotos.buscar_foto(r.busqueda_foto)
+        except Exception:
+            return None
 
 
 # ---------------------------------------------------------------------------

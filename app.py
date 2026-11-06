@@ -239,10 +239,10 @@ def _pintar_foto(r, f):
     if f and usadas.setdefault(f["url"], r.nombre) != r.nombre:
         f = None
     if f and f.get("fuente") == "IA":
-        st.image(f["url"], width="stretch")
+        st.image(f["url"], use_container_width=True)
         st.markdown('<div class="sz-credito">Imagen creada con IA</div>', unsafe_allow_html=True)
     elif f:
-        st.image(f["url"], width="stretch")
+        st.image(f["url"], use_container_width=True)
         d.credito_foto(f)
     else:
         d.foto_vacia()

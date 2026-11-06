@@ -124,6 +124,12 @@ def foto(consulta: str, plato: str = "", version: int = 16):
 
 
 def _buscar_foto(r):
+    """Prioriza el generador de imágenes por IA sobre la búsqueda en Unsplash/Commons."""
+    foto_generada = _imagen_ia(r)
+    if foto_generada and not foto_generada.get("_error"):
+        return foto_generada
+        
+    # Respaldo: si el generador falla, buscar foto libre real
     malas = _sin_foto_reciente()
     if time.time() - malas.get(r.busqueda_foto, 0) <= 3600:
         return None

@@ -188,7 +188,7 @@ def resultados():
         return
     st.write("")
     if cero:
-        st.markdown('<p class="sz-seccion">✅ Con lo que tienes: no compras nada</p>', unsafe_allow_html=True)
+        # Oración eliminada
         cuadricula(cero, "c", True)
     if uno:
         st.markdown('<p class="sz-seccion">🛒 Te falta solo un ingrediente</p>', unsafe_allow_html=True)

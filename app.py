@@ -50,11 +50,15 @@ def secreto(nombre):
 
 
 def cliente_gemini():
-    from google import genai
-    clave = secreto("GEMINI_API_KEY")
+    try:
+        from google import genai
+        from google.genai import types
+    except ImportError as e:
+        raise n.ErrorIA("Falta google-genai en requirements.txt. Instálalo y vuelve a desplegar.") from e
+    clave = str(secreto("GEMINI_API_KEY") or secreto("GOOGLE_API_KEY") or "").strip().strip("\"'")
     if not clave:
-        raise n.ErrorIA("Falta la clave de la IA (GEMINI_API_KEY): agrégala en Variables de Railway y vuelve a desplegar.")
-    return genai.Client(api_key=clave)
+        raise n.ErrorIA("Falta GEMINI_API_KEY en las Variables de Railway. Agrégala y vuelve a desplegar.")
+    return genai.Client(api_key=clave, http_options=types.HttpOptions(timeout=60000))
 
 
 def esperar_turno():
@@ -74,16 +78,18 @@ def _sin_foto_reciente() -> dict:
 
 
 @st.cache_data(ttl=7 * 86400, show_spinner=False, max_entries=500)
-def foto(consulta: str, plato: str = "", version: int = 15):
+def foto(consulta: str, plato: str = "", version: int = 16):
     """Busca la foto y, si hay clave de IA, la IA mira cada candidata y solo acepta la que es ese plato.
     Solo se guarda cuando SÍ hay foto; si no, se reintenta en una hora."""
     verificar = None
-    if secreto("GEMINI_API_KEY"):
+    if secreto("GEMINI_API_KEY") or secreto("GOOGLE_API_KEY"):
         cliente = cliente_gemini()
 
         def verificar(url):
             try:
-                img = requests.get(url, timeout=5).content
+                respuesta = requests.get(url, timeout=8)
+                respuesta.raise_for_status()
+                img = respuesta.content
             except requests.RequestException:
                 return False
             try:
@@ -115,56 +121,40 @@ def _creadas_hoy() -> dict:
 
 
 MAX_IMAGENES_DIA = 30
-MODELOS_IMAGEN = (
+MODELOS_IMAGEN = tuple(dict.fromkeys([
+    str(secreto("MODELO_GEMINI_IMAGEN") or "gemini-2.5-flash-image").strip(),
     "gemini-2.5-flash-image",
-    "gemini-2.0-flash-preview-image-generation",
-    "gemini-2.0-flash-exp",
-)
+]))
 
 
-@st.cache_data(ttl=60 * 86400, show_spinner=False, max_entries=1000, persist="disk")
-def crear_imagen(plato: str, ingredientes: str) -> bytes | None:
-    """La IA crea la foto del plato (solo para recetas sin foto real). Se guarda para no pagarla dos veces."""
-    from google.genai import types
-    cuenta = _creadas_hoy()
-    hoy = time.strftime("%Y-%m-%d")
-    if cuenta.get(hoy, 0) >= MAX_IMAGENES_DIA:
-        raise SinFoto("límite diario de imágenes")
-    cliente = cliente_gemini()
-    prompt = (f"Fotografía gastronómica realista, apetitosa, luz natural, plato servido sobre una mesa, vista de 3/4: "
-              f"{plato}. Lleva SOLO estos ingredientes, que se reconozcan: {ingredientes}. "
-              "Sin texto, sin personas, sin manos, sin ingredientes extra.")
-    for modelo in MODELOS_IMAGEN:
-        try:
-            resp = cliente.models.generate_content(
-                model=modelo,
-                contents=prompt,
-                config=types.GenerateContentConfig(response_modalities=["IMAGE"]),
-            )
-            datos = None
-            for cand in (getattr(resp, "candidates", None) or []):
-                content = getattr(cand, "content", None)
-                for part in (getattr(content, "parts", None) or []):
-                    inline = getattr(part, "inline_data", None)
-                    if inline and getattr(inline, "data", None):
-                        datos = inline.data
-                        break
-                if datos:
-                    break
-            if not datos:
-                for part in (getattr(resp, "parts", None) or []):
-                    inline = getattr(part, "inline_data", None)
-                    if inline and getattr(inline, "data", None):
-                        datos = inline.data
-                        break
-            if not datos:
-                raise ValueError("respuesta sin imagen")
-            cuenta[hoy] = cuenta.get(hoy, 0) + 1
-            print(f"[imagen] creada para {plato!r} con {modelo} ({cuenta[hoy]} hoy)", flush=True)
-            return datos
-        except Exception as e:  # noqa: BLE001
-            print(f"[imagen] {modelo} falló: {str(e)[:200]}", flush=True)
-    raise SinFoto("no se pudo crear la imagen")
+@st.cache_resource
+def _bloqueo_imagen():
+    from threading import Lock
+    return Lock()
+
+
+@st.cache_data(ttl=60 * 86400, show_spinner=False, max_entries=1000)
+def crear_imagen(plato: str, ingredientes: str) -> bytes:
+    """Serializa generaciones para evitar ráfagas y protege el contador local."""
+    def extraer(resp):
+        for candidato in getattr(resp, "candidates", None) or []:
+            for parte in getattr(getattr(candidato, "content", None), "parts", None) or []:
+                inline = getattr(parte, "inline_data", None)
+                datos = getattr(inline, "data", None)
+                if datos and str(getattr(inline, "mime_type", "")).startswith("image/"):
+                    return datos
+        raise n.ErrorIA("Gemini no devolvió una imagen. Prueba otro plato o revisa el acceso al modelo de imágenes.")
+    with _bloqueo_imagen():
+        cuenta = _creadas_hoy()
+        hoy = time.strftime("%Y-%m-%d")
+        if cuenta.get(hoy, 0) >= MAX_IMAGENES_DIA:
+            raise n.ErrorIA("Se alcanzó el límite local de 30 imágenes diarias de esta instancia.")
+        prompt = (f"Fotografía gastronómica realista, luz natural, plato servido, vista de 3/4: {plato}. "
+                  f"Solo estos ingredientes: {ingredientes}. Sin texto, personas ni ingredientes extra.")
+        datos, _ = n.generar_con_respaldo(cliente_gemini(), prompt, MODELOS_IMAGEN,
+            dict(response_modalities=["TEXT", "IMAGE"]), extraer, reintentos=0)
+        cuenta[hoy] = cuenta.get(hoy, 0) + 1
+        return datos
 
 
 def _imagen_ia(r):
@@ -179,7 +169,7 @@ def _imagen_ia(r):
         import base64
         b64 = base64.b64encode(datos).decode("ascii")
         return {
-            "url": f"data:image/png;base64,{b64}",
+            "url": f"data:{n.mime_imagen(datos)};base64,{b64}",
             "fuente": "IA",
             "autor": "Gemini",
             "pagina": "",
@@ -187,8 +177,7 @@ def _imagen_ia(r):
             "licencia_url": "",
         }
     except Exception as e:  # noqa: BLE001
-        print(f"[imagen_ia] {type(e).__name__}: {e}", flush=True)
-        return None
+        return {"_error": str(n.error_gemini(e))}
 
 
 # ---------------------------------------------------------------------------
@@ -206,17 +195,8 @@ def ingredientes_en_foto(datos: bytes, _sugerencias: tuple = ()) -> list[str]:
               "Lista TODOS los ingredientes de cocina que reconozcas. "
               "Responde únicamente con los nombres separados por coma, en español, en singular "
               "(sin cantidades, sin marcas, sin explicaciones). Si no hay ningún ingrediente, responde: ninguno")
-    partes = [prompt, types.Part.from_bytes(data=datos, mime_type="image/jpeg")]
-    resp = None
-    for modelo in n.MODELOS_CASCADA:   # si la llave no tiene acceso a uno, prueba el siguiente
-        try:
-            resp = cliente.models.generate_content(model=modelo, contents=partes,
-                                                   config=types.GenerateContentConfig(temperature=0.2))
-            break
-        except Exception:  # noqa: BLE001
-            resp = None
-    if resp is None:
-        raise n.ErrorIA("La IA no pudo mirar la foto ahora. Inténtalo de nuevo en un momento.")
+    partes = [prompt, types.Part.from_bytes(data=datos, mime_type=n.mime_imagen(datos))]
+    resp, _ = n.generar_con_respaldo(cliente, partes, config=dict(temperature=0.2, max_output_tokens=2048))
     texto = (resp.text or "").strip().lower()
     if not texto or "ninguno" in texto:
         return []
@@ -234,7 +214,8 @@ def marcar_desde_foto(archivo):
         if not k or k in vistos or "sobrante" in k:
             continue
         vistos.add(k)
-        i = claves_comunes.get(k) or claves_comunes.get(k.rstrip("s")) or claves_comunes.get(k.removesuffix("es"))
+        i = next((claves_comunes[x] for x in (k, k.rstrip("s"), k.removesuffix("es"))
+                  if x in claves_comunes), None)
         if i is not None:
             st.session_state[f"ing_{i}"] = True      # marca el botón del ingrediente
             marcados.append(c.COMUNES[i])
@@ -272,6 +253,10 @@ def foto_refri():
 
 
 def _pintar_foto(r, f):
+    if f and f.get("_error"):
+        d.foto_vacia()
+        st.caption("No se pudo generar la imagen IA: " + f["_error"])
+        return
     usadas = st.session_state.setdefault("_fotos_usadas", {})   # una misma foto no se repite en dos recetas
     if f and usadas.setdefault(f["url"], r.nombre) != r.nombre:
         f = None
@@ -295,7 +280,7 @@ def mostrar_foto(r, despues: bool = False):
             d.foto_vacia()
         PENDIENTES.append((hueco, r))
         return
-    _pintar_foto(r, _buscar_foto(r))
+    _pintar_foto(r, _buscar_foto(r) or _imagen_ia(r))
 
 
 def poner_fotos():
@@ -311,7 +296,7 @@ def poner_fotos():
         add_script_run_ctx(None, ctx)
         return _buscar_foto(r) or _imagen_ia(r)       # sin foto real: la IA la crea
     t0 = time.time()
-    with ThreadPoolExecutor(6) as ex:
+    with ThreadPoolExecutor(2) as ex:
         fotos_ = list(ex.map(una, [r for _, r in pend]))
     print(f"[tiempo] fotos: {time.time() - t0:.1f} s", flush=True)
     for (hueco, r), f in zip(pend, fotos_):
@@ -381,7 +366,7 @@ def ver_receta(r):
         st.markdown(sello_cero(r) if all(i.de_tu_casa for i in r.ingredientes) else sello_falta(r),
                     unsafe_allow_html=True)
     st.subheader("Lo que usas de tu casa")
-    items = [f"<li><b>{html.escape(i.nombre)}</b>: {html.escape(n.lo_que_usas(i))}"
+    items = [f"<li><b>{html.escape(i.nombre)}</b>: {html.escape(i.cantidad)}"
              f"{' · <i>básico de cocina</i>' if i.basico_de_despensa else ''}</li>"
              for i in r.ingredientes if i.de_tu_casa]
     st.markdown(f'<ul class="dp-usa">{"".join(items)}</ul>', unsafe_allow_html=True)
@@ -392,9 +377,9 @@ def ver_receta(r):
                       for i in falta], hide_index=True, width="stretch",
                      column_config={"Precio": st.column_config.NumberColumn(format="$%.2f")})
     with st.expander("🧾 ¿Cuánto te ahorras? Lo que costaría comprar cada cosa"):
-        filas = [{"Ingrediente": f["Ingrediente"], "Usas": f["Usas"], "Si lo compraras": f["Compras"],
-                  "Valdría lo que usas": f["Vale lo que usas"]}
-                 for f, i in zip(n.desglose_receta(r), r.ingredientes) if i.de_tu_casa and not i.basico_de_despensa]
+        filas = [{"Ingrediente": i.nombre, "Usas": i.cantidad, "Si lo compraras": i.presentacion,
+                  "Valdría lo que usas": n.costo_ingrediente(i)}
+                 for i in r.ingredientes if i.de_tu_casa and not i.basico_de_despensa]
         st.dataframe(filas, hide_index=True, width="stretch",
                      column_config={"Valdría lo que usas": st.column_config.NumberColumn(format="$%.2f")})
         st.caption(f"Usando lo que ya tienes te ahorras unos ${c.ahorro(r):.2f}. Precios estimados por IA en "
@@ -542,9 +527,33 @@ def resultados():
                 buscar(mas=True)
                 if len(st.session_state["cero"]) + len(st.session_state["uno"]) == antes:
                     st.session_state["sin_mas"] = True
-            except Exception:
-                st.session_state["sin_mas"] = True
+            except Exception as err:
+                st.error(str(n.error_gemini(err)))
+                return
             st.rerun()
+
+
+def diagnostico_gemini():
+    with st.expander("Comprobar conexión con Gemini"):
+        st.caption("La prueba de texto hace una consulta breve. Las imágenes usan un modelo y una cuota distintos.")
+        if st.button("Probar conexión", key="probar_gemini"):
+            try:
+                respuesta, modelo = n.generar_con_respaldo(
+                    cliente_gemini(), "Responde solo OK.", config=dict(max_output_tokens=128))
+                if not (getattr(respuesta, "text", None) or "").strip():
+                    raise n.ErrorIA("Gemini respondió sin texto. Prueba de nuevo.")
+                st.success("Conexión de texto correcta: " + modelo)
+            except Exception as err:
+                st.error(str(n.error_gemini(err)))
+        st.caption("Probar imágenes genera una imagen y consume cuota de imágenes.")
+        if st.button("Probar imagen IA", key="probar_imagen_gemini"):
+            try:
+                with st.spinner("Generando imagen de prueba…"):
+                    imagen = crear_imagen("Arroz blanco cocido", "arroz, agua, sal")
+                st.image(imagen, caption="Imagen generada con Gemini", width=260)
+                st.success("Generación de imágenes correcta.")
+            except Exception as err:
+                st.error(str(n.error_gemini(err)))
 
 
 st.session_state["_dialogo_puesto"] = False
@@ -552,6 +561,7 @@ d.aplicar_estilos()
 portada.estilos()
 portada.cabecera(d.isotipo_svg("#fff", 30))
 formulario()
+diagnostico_gemini()
 resultados()
 st.divider()
 if os.environ.get("EDAMAM_APP_ID"):

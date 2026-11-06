@@ -1,0 +1,34 @@
+CORRECCIÓN DE GEMINI — LAREFRI
+
+1. Reemplaza app.py, nucleo.py, casa.py y fotos.py en tu proyecto por los de este ZIP.
+   Conserva diseno.py, memoria.py, mealdb.py, icono.png y los demás archivos que ya tienes.
+   Este ZIP es una actualización, no el proyecto completo.
+2. En tu requirements.txt conserva las otras dependencias y asegúrate de incluir:
+   google-genai>=1.30.0,<3
+   pydantic>=2,<3
+   Si ya están con una versión anterior, actualiza esas líneas; no las dupliques.
+3. En Variables de Railway verifica GEMINI_API_KEY. No la pongas en el código.
+   También se admite GOOGLE_API_KEY como alternativa.
+   MODELO_GEMINI y MODELO_GEMINI_RESPALDO conservan tus valores configurados.
+   Sin configurar esas variables se usan gemini-2.5-flash y gemini-2.5-flash-lite.
+   MODELO_GEMINI_IMAGEN es opcional; por defecto se usa gemini-2.5-flash-image.
+4. Vuelve a desplegar. Abre «Comprobar conexión con Gemini» debajo del formulario.
+   Prueba texto e imagen por separado. La imagen de prueba consume cuota.
+5. Si aparece 429, revisa la cuota del modelo y la facturación del proyecto en Google AI Studio.
+   Si aparece 403, revisa permisos/restricciones. Una clave que genera texto no garantiza cuota para imágenes.
+
+CORRECCIONES
+- Los fallos de Gemini ya no se disfrazan de búsquedas sin recetas.
+- Se conservan resultados del recetario aunque falle la generación principal.
+- Se eliminan respaldos antiguos 1.5/2.0 y se conservan modelos configurables.
+- Las fotos PNG/WebP se envían con su formato correcto.
+- Las imágenes IA se generan una a una, con límite local y mensajes de error visibles.
+- Se reconocen fotos de Commons por su título cuando la revisión IA no está disponible.
+- El detalle vuelve a utilizar funciones existentes para cantidades y costos.
+- Se conserva el diseño del app.py que enviaste. No se agrega 3D.
+
+VALIDACIÓN
+Compilación Python correcta y ocho pruebas automatizadas con respuestas simuladas.
+No se probó tu clave ni el despliegue real de Railway; no se dispone de sus credenciales.
+No se pudo ejecutar tests/test_nucleo.py citado en AGENTS.md porque no fue adjuntado.
+El límite de 30 imágenes corresponde a cada instancia del servidor; no es un límite de facturación de Google.

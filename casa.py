@@ -155,7 +155,12 @@ def ahorro(r: RecetaCasa) -> float:
     return round(sum(n.costo_ingrediente(i) for i in r.ingredientes if i.de_tu_casa and not i.basico_de_despensa), 2)
 
 def recetas_de_la_memoria(tiene, personas, tiempo, dieta="Todas", categoria="", excluir=()):
-    import memoria
+    try:
+        import memoria
+    except ModuleNotFoundError as e:
+        if e.name != "memoria":
+            raise
+        return []
     todo = list(tiene) + BASICOS
     out = []
     for r in memoria.buscar(categoria=categoria, dieta=dieta, tiempo=tiempo, excluir=excluir):
@@ -189,7 +194,7 @@ def buscar_con_lo_que_hay(cliente, tiene: list[str], personas: int, tiempo: int,
     uno = [r for r in de_memoria if len(faltantes(r, todo)) == 1]
     
     if len(cero) >= cantidad or (len(cero) + len(uno) >= cantidad):
-        return cero[:cantidad] if cero else de_memoria[:cantidad], uno[:cantidad]
+        return cero[:cantidad], uno[:cantidad] if permitir_faltante else []
         
     prompt = PROMPT_CASA.format(
         n=cantidad + 4, tiene=", ".join(tiene), basicos=", ".join(sorted(set(basicos + BASICOS_FIJOS))), personas=personas, tiempo=tiempo,
@@ -205,20 +210,24 @@ def buscar_con_lo_que_hay(cliente, tiene: list[str], personas: int, tiempo: int,
     nombres_memoria = {r.nombre for r in de_memoria}
     
     cat = None
+    error_ia = None
     recetario = []
-    try:
-        with ThreadPoolExecutor(2) as ex:
-            f_rec = ex.submit(lambda: [] if (categoria or creativo) else
-                              recetas_del_recetario(cliente, tiene, personas, tiempo, dieta, basicos, excluir))
-            f_ia = ex.submit(n.llamar_gemini, cliente, prompt, CatalogoCasa, razonamiento="minimal",
-                             modelos=n.MODELOS_CASCADA)
+    with ThreadPoolExecutor(2) as ex:
+        f_rec = ex.submit(lambda: [] if (categoria or creativo) else
+                          recetas_del_recetario(cliente, tiene, personas, tiempo, dieta, basicos, excluir))
+        f_ia = ex.submit(n.llamar_gemini, cliente, prompt, CatalogoCasa, razonamiento="minimal",
+                        modelos=n.MODELOS_CASCADA)
+        try:
+            cat, _ = f_ia.result()
+        except Exception as e:
+            error_ia = n.error_gemini(e)
+        try:
             recetario = [r for r in f_rec.result() if r.nombre not in nombres_memoria]
-            try:
-                cat, _ = f_ia.result()
-            except Exception:
-                cat = None
-    except Exception:
-        cat = None
+        except Exception:
+            recetario = []
+    cero.extend(recetario)
+    if error_ia and not cero and not uno:
+        raise error_ia
 
     ya = {r.nombre for r in cero}
     if cat and getattr(cat, "recetas", None):
@@ -231,7 +240,7 @@ def buscar_con_lo_que_hay(cliente, tiene: list[str], personas: int, tiempo: int,
             falta = faltantes(r, todo)
             if not falta:
                 cero.append(r)
-            elif len(falta) <= 2:
+            elif permitir_faltante and len(falta) == 1:
                 uno.append(r)
 
     if not cero and not uno:

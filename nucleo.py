@@ -20,7 +20,7 @@ from pydantic import BaseModel, Field
 # Nombres de modelos válidos de la API oficial de Google Gemini
 MODELO_PRINCIPAL = os.environ.get("MODELO_GEMINI", "gemini-2.5-flash")
 MODELO_RESPALDO = os.environ.get("MODELO_GEMINI_RESPALDO", "gemini-2.5-flash-lite")
-MODELOS_CASCADA = (MODELO_PRINCIPAL, MODELO_RESPALDO, "gemini-2.0-flash", "gemini-1.5-flash")
+MODELOS_CASCADA = tuple(dict.fromkeys(m.strip() for m in (MODELO_PRINCIPAL, MODELO_RESPALDO, "gemini-2.5-flash", "gemini-2.5-flash-lite") if m.strip()))
 
 COCINAS = ["Ecuatoriana", "Italiana", "China", "Mexicana", "Peruana", "Mediterránea",
            "India", "Japonesa", "Tailandesa", "Árabe", "Colombiana", "Española"]
@@ -312,59 +312,90 @@ class ErrorIA(Exception):
     """Error con un mensaje listo para mostrar."""
 
 def _codigo(e: Exception) -> int | None:
-    return getattr(e, "code", None) or getattr(e, "status_code", None)
+    try:
+        return int(getattr(e, "code", None) or getattr(e, "status_code", None))
+    except (TypeError, ValueError):
+        return None
 
-def llamar_gemini(cliente, prompt: str, esquema, modelos=MODELOS_CASCADA, reintentos: int = 2,
-                  razonamiento: str = "low"):
+
+def error_gemini(e):
+    """Mensaje seguro: nunca muestra la respuesta cruda ni la clave."""
+    if isinstance(e, ErrorIA):
+        return e
+    code = _codigo(e)
+    texto = str(e).lower()
+    if code == 401 or any(x in texto for x in ("api_key_invalid", "api key not valid", "api key expired")):
+        return ErrorIA("La clave de Gemini no es válida o caducó. Revisa GEMINI_API_KEY en Railway.")
+    if code == 403:
+        return ErrorIA("Gemini denegó el acceso (403). Revisa los permisos y restricciones de la clave en Google AI Studio.")
+    if code == 429:
+        return ErrorIA("Gemini alcanzó su cuota (429). Revisa los límites y la facturación en Google AI Studio; esperar no resuelve una cuota diaria agotada o igual a cero.")
+    if code == 402 or "billing" in texto or "failed_precondition" in texto:
+        return ErrorIA("Gemini requiere revisar la facturación o los requisitos del proyecto en Google AI Studio.")
+    if code == 404:
+        return ErrorIA("El modelo de Gemini no está disponible (404). Revisa las variables MODELO_GEMINI y MODELO_GEMINI_IMAGEN.")
+    if code == 400:
+        return ErrorIA("Gemini rechazó la solicitud (400). Revisa el modelo configurado y actualiza google-genai.")
+    if code and code >= 500:
+        return ErrorIA("Gemini tiene un fallo temporal. Vuelve a intentarlo en unos momentos.")
+    if isinstance(e, (ImportError, AttributeError)):
+        return ErrorIA("Actualiza la dependencia google-genai y vuelve a desplegar la aplicación.")
+    return ErrorIA("No se pudo completar la respuesta de Gemini. Comprueba la conexión y vuelve a intentar.")
+
+
+def generar_con_respaldo(cliente, contenidos, modelos=None, config=None, validar=None, reintentos=1):
     from google.genai import types
-
-    ultimo_error: Exception | None = None
-    usar_nivel = True
-    hubo_403 = False
-    for modelo in modelos:
+    errores = []
+    for modelo in dict.fromkeys(modelos or MODELOS_CASCADA):
         for intento in range(reintentos + 1):
             try:
-                cfg = dict(
-                    system_instruction=SISTEMA,
-                    response_mime_type="application/json",
-                    response_schema=esquema,
-                    temperature=0.4,
-                    max_output_tokens=12000,
-                )
-                if usar_nivel and "think" in str(modelo).lower():
-                    cfg["thinking_config"] = types.ThinkingConfig(thinking_level=razonamiento)
-                resp = cliente.models.generate_content(
-                    model=modelo,
-                    contents=prompt,
-                    config=types.GenerateContentConfig(**cfg),
-                )
-                obj = resp.parsed
-                if obj is None and getattr(resp, "text", None):
-                    obj = esquema.model_validate(json.loads(resp.text)) if hasattr(esquema, "model_validate") else esquema.parse_raw(resp.text)
-                if obj is None:
-                    raise ValueError("respuesta vacía")
-                return obj, modelo
-            except Exception as e:  # noqa: BLE001
-                ultimo_error = e
+                cfg = dict(config or {})
+                if modelo.startswith("gemini-2.5-flash") and "image" not in modelo:
+                    cfg["thinking_config"] = types.ThinkingConfig(thinking_budget=0)
+                respuesta = cliente.models.generate_content(
+                    model=modelo, contents=contenidos, config=types.GenerateContentConfig(**cfg))
+                return (validar(respuesta) if validar else respuesta), modelo
+            except Exception as e:
+                errores.append(e)
                 codigo = _codigo(e)
-                print(f"[gemini] {modelo}: {type(e).__name__}: {str(e)[:300]}", flush=True)
-                if codigo == 401:
-                    raise ErrorIA("La clave de la IA no es válida. Revisa el secreto GEMINI_API_KEY.") from e
-                if codigo == 400 and usar_nivel:
-                    usar_nivel = False
-                    continue
-                if codigo in (403, 404, 429):
-                    hubo_403 = hubo_403 or codigo == 403
+                print(f"[gemini] modelo={modelo} codigo={codigo} tipo={type(e).__name__}", flush=True)
+                if codigo in (401, 403, 402) or "api_key_invalid" in str(e).lower() or "api key not valid" in str(e).lower():
+                    raise error_gemini(e) from e
+                if codigo in (400, 404, 429):
                     break
                 if intento < reintentos:
-                    time.sleep(2)
-                    continue
-                break
-    codigo = _codigo(ultimo_error) if ultimo_error else None
-    if codigo == 429:
-        raise ErrorIA("Se alcanzó el límite de consultas a la IA. Espera un minuto y vuelve a intentar.")
-    detalle = f" ({type(ultimo_error).__name__}: {str(ultimo_error)[:160]})" if ultimo_error else ""
-    raise ErrorIA("La IA no devolvió recetas válidas" + detalle + ". Intenta de nuevo.")
+                    time.sleep(1 + intento)
+    # Un modelo retirado no debe ocultar un error de cuota previo.
+    error = next((e for e in errores if _codigo(e) == 429), errores[-1] if errores else ValueError())
+    raise error_gemini(error) from error
+
+
+def llamar_gemini(cliente, prompt: str, esquema, modelos=MODELOS_CASCADA, reintentos: int = 1,
+                  razonamiento: str = "low"):
+    def validar(resp):
+        obj = getattr(resp, "parsed", None)
+        if isinstance(obj, esquema):
+            return obj
+        if obj is not None:
+            return esquema.model_validate(obj)
+        texto = (getattr(resp, "text", None) or "").strip()
+        if not texto:
+            raise ValueError("respuesta vacía")
+        return esquema.model_validate_json(texto)
+    return generar_con_respaldo(cliente, prompt, modelos, dict(
+        system_instruction=SISTEMA, response_mime_type="application/json",
+        response_schema=esquema, temperature=0.4, max_output_tokens=12000), validar, reintentos)
+
+
+def mime_imagen(datos):
+    if datos.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "image/png"
+    if datos.startswith(b"RIFF") and datos[8:12] == b"WEBP":
+        return "image/webp"
+    if datos.startswith(b"\xff\xd8"):
+        return "image/jpeg"
+    raise ErrorIA("La imagen no es un JPG, PNG o WebP válido.")
+
 
 def buscar_recetas(cliente, cocinas, personas, max_porcion, tiempo, tipos=(), ciudad="Guayaquil",
                    excluir=(), sobrantes=(), cantidad=RECETAS_POR_BUSQUEDA, categoria="", dieta="Todas"):
@@ -406,22 +437,14 @@ def foto_coincide(cliente, imagen_bytes: bytes, plato: str, consulta: str = "") 
         "Responde SOLO con una palabra: SI o NO. "
         "SI solo si se ve el plato cocinado/servido, no ingredientes crudos solos, no mercados, no personas."
     )
-    partes = [prompt, types.Part.from_bytes(data=imagen_bytes, mime_type="image/jpeg")]
-    for modelo in MODELOS_CASCADA:
-        try:
-            resp = cliente.models.generate_content(
-                model=modelo,
-                contents=partes,
-                config=types.GenerateContentConfig(temperature=0.0, max_output_tokens=8),
-            )
-            texto = (getattr(resp, "text", None) or "").strip().upper()
-            if "SI" in texto or "YES" in texto:
-                return True
-            if "NO" in texto:
-                return False
-        except Exception as e:  # noqa: BLE001
-            codigo = _codigo(e)
-            if codigo in (401, 403, 404, 429):
-                return None
-            continue
+    try:
+        partes = [prompt, types.Part.from_bytes(data=imagen_bytes, mime_type=mime_imagen(imagen_bytes))]
+        resp, _ = generar_con_respaldo(cliente, partes, config=dict(temperature=0.0, max_output_tokens=128))
+        texto = _clave(getattr(resp, "text", None) or "").strip(" .!\n")
+        if texto in ("si", "yes"):
+            return True
+        if texto == "no":
+            return False
+    except ErrorIA:
+        pass
     return None

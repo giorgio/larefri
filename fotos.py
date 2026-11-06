@@ -128,7 +128,7 @@ def foto_commons(consulta: str) -> dict | None:
         return {"url": info["thumburl"], "autor": _texto_plano((meta.get("Artist") or {}).get("value", "")) or "Autor",
                 "pagina": info.get("descriptionurl") or "https://commons.wikimedia.org",
                 "licencia": licencia, "licencia_url": (meta.get("LicenseUrl") or {}).get("value", ""),
-                "fuente": "Wikimedia Commons"}
+                "fuente": "Wikimedia Commons", "_titulo": p.get("title", "")}
     return None
 
 
@@ -279,8 +279,8 @@ def buscar_foto(consulta: str, clave_pexels: str | None = None, clave_unsplash: 
         ok = True if verificar is None else verificar(c.get("url_chica") or c["url"])
         if ok is None:          # la IA no pudo revisar (cuota): aceptar si el título de la foto nombra el plato
             p = palabras_plato(consulta)                 # estricto: la descripción debe nombrar TODO el plato
-            ok = (c.get("fuente") == "Unsplash" and len(p) >= 2      # Wikimedia sin revisión de IA: nunca
-                  and es_del_plato(_texto_unsplash(c.get("_crudo") or {}), p, minimo=len({_raiz(w) for w in p})))
+            titulo = (c.get("_titulo") or _texto_unsplash(c.get("_crudo") or {}))
+            ok = bool(titulo) and es_del_plato(titulo, p, minimo=len({_raiz(w) for w in p}))
             print(f"[foto] sin revisión de IA, {'acepto' if ok else 'descarto'} por título", flush=True)
         if not ok:
             if not candidatas and not probado_commons:   # ninguna de Unsplash sirvió: probar Wikimedia

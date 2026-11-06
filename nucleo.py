@@ -394,3 +394,34 @@ def buscar_recetas(cliente, cocinas, personas, max_porcion, tiempo, tipos=(), ci
 def _clave(texto: str) -> str:
     t = unicodedata.normalize("NFD", texto.lower().strip())
     return "".join(c for c in t if unicodedata.category(c) != "Mn")
+
+
+def foto_coincide(cliente, imagen_bytes: bytes, plato: str, consulta: str = "") -> bool | None:
+    """True si la foto muestra el plato pedido, False si no, None si la IA no pudo revisar.
+    Se usa para filtrar candidatas de Unsplash/Commons antes de mostrarlas."""
+    from google.genai import types
+    prompt = (
+        f"¿Esta foto muestra el plato de comida «{plato}» (o muy similar) listo para servir? "
+        f"Búsqueda: {consulta or plato}. "
+        "Responde SOLO con una palabra: SI o NO. "
+        "SI solo si se ve el plato cocinado/servido, no ingredientes crudos solos, no mercados, no personas."
+    )
+    partes = [prompt, types.Part.from_bytes(data=imagen_bytes, mime_type="image/jpeg")]
+    for modelo in MODELOS_CASCADA:
+        try:
+            resp = cliente.models.generate_content(
+                model=modelo,
+                contents=partes,
+                config=types.GenerateContentConfig(temperature=0.0, max_output_tokens=8),
+            )
+            texto = (getattr(resp, "text", None) or "").strip().upper()
+            if "SI" in texto or "YES" in texto:
+                return True
+            if "NO" in texto:
+                return False
+        except Exception as e:  # noqa: BLE001
+            codigo = _codigo(e)
+            if codigo in (401, 403, 404, 429):
+                return None
+            continue
+    return None

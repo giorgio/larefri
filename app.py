@@ -88,8 +88,8 @@ def foto(consulta: str, plato: str = "", version: int = 15):
                 return False
             try:
                 return n.foto_coincide(cliente, img, plato or consulta, consulta)
-            except n.ErrorIA:
-                return None          # no se pudo revisar: fotos.py decide por el título
+            except Exception:  # noqa: BLE001  (cuota, modelo, red: fotos.py decide por el título)
+                return None
     f = fotos.buscar_foto(consulta, secreto("PEXELS_API_KEY"), secreto("UNSPLASH_ACCESS_KEY"), verificar)
     if not f:
         raise SinFoto(consulta)
@@ -115,7 +115,11 @@ def _creadas_hoy() -> dict:
 
 
 MAX_IMAGENES_DIA = 30
-MODELOS_IMAGEN = ("gemini-2.5-flash-image", "gemini-3.1-flash-image-preview", "gemini-3-pro-image-preview")
+MODELOS_IMAGEN = (
+    "gemini-2.5-flash-image",
+    "gemini-2.0-flash-preview-image-generation",
+    "gemini-2.0-flash-exp",
+)
 
 
 @st.cache_data(ttl=60 * 86400, show_spinner=False, max_entries=1000, persist="disk")
@@ -132,9 +136,29 @@ def crear_imagen(plato: str, ingredientes: str) -> bytes | None:
               "Sin texto, sin personas, sin manos, sin ingredientes extra.")
     for modelo in MODELOS_IMAGEN:
         try:
-            resp = cliente.models.generate_content(model=modelo, contents=prompt, config=types.GenerateContentConfig(
-                response_modalities=["IMAGE"]))
-            datos = next(p.inline_data.data for p in resp.candidates[0].content.parts if p.inline_data)
+            resp = cliente.models.generate_content(
+                model=modelo,
+                contents=prompt,
+                config=types.GenerateContentConfig(response_modalities=["IMAGE"]),
+            )
+            datos = None
+            for cand in (getattr(resp, "candidates", None) or []):
+                content = getattr(cand, "content", None)
+                for part in (getattr(content, "parts", None) or []):
+                    inline = getattr(part, "inline_data", None)
+                    if inline and getattr(inline, "data", None):
+                        datos = inline.data
+                        break
+                if datos:
+                    break
+            if not datos:
+                for part in (getattr(resp, "parts", None) or []):
+                    inline = getattr(part, "inline_data", None)
+                    if inline and getattr(inline, "data", None):
+                        datos = inline.data
+                        break
+            if not datos:
+                raise ValueError("respuesta sin imagen")
             cuenta[hoy] = cuenta.get(hoy, 0) + 1
             print(f"[imagen] creada para {plato!r} con {modelo} ({cuenta[hoy]} hoy)", flush=True)
             return datos
@@ -144,9 +168,27 @@ def crear_imagen(plato: str, ingredientes: str) -> bytes | None:
 
 
 def _imagen_ia(r):
-    kw = re.sub(r"[^a-zA-Z0-9 ]+", "", r.busqueda_foto or r.nombre).strip().replace(" ", ",")
-    url_foto = f"https://loremflickr.com/500/500/food,{kw}"
-    return {"url": url_foto, "fuente": "Unsplash"}
+    """Genera la foto del plato con Gemini cuando no hay foto real de Unsplash/Commons."""
+    try:
+        ings = ", ".join(
+            i.nombre for i in r.ingredientes if not getattr(i, "basico_de_despensa", False)
+        )[:220]
+        datos = crear_imagen(r.nombre, ings or (r.busqueda_foto or "plato casero"))
+        if not datos:
+            return None
+        import base64
+        b64 = base64.b64encode(datos).decode("ascii")
+        return {
+            "url": f"data:image/png;base64,{b64}",
+            "fuente": "IA",
+            "autor": "Gemini",
+            "pagina": "",
+            "licencia": "",
+            "licencia_url": "",
+        }
+    except Exception as e:  # noqa: BLE001
+        print(f"[imagen_ia] {type(e).__name__}: {e}", flush=True)
+        return None
 
 
 # ---------------------------------------------------------------------------

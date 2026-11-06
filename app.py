@@ -153,7 +153,7 @@ def crear_imagen(plato: str, ingredientes: str) -> bytes:
     from huggingface_hub import InferenceClient
     
     token = str(secreto("HF_TOKEN") or "hf_RvsVEmasyCwshNdPUYUmqdcqSLN0pcBUS").strip()
-    cliente = InferenceClient("black-forest-labs/FLUX.1-dev", token=token)
+    cliente = InferenceClient("black-forest-labs/FLUX.1-schnell", token=token)
     
     prompt = f"Appetizing gourmet food dish {plato}, cooked with {ingredientes}, realistic food photography, high resolution, 3/4 angle, delicious presentation"
     

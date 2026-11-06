@@ -166,7 +166,7 @@ def crear_imagen(plato: str, ingredientes: str) -> bytes:
     import random
     
     semilla = random.randint(1000, 999999)
-    prompt = f"Ecuadorian food dish {plato}, prepared with {ingredientes}, realistic food photography, high resolution, 3/4 angle, delicious presentation"
+    prompt = f"Delicious gourmet dish {plato}, prepared with {ingredientes}, realistic food photography, high resolution, 3/4 angle, restaurant style presentation"
     prompt_encoded = urllib.parse.quote(prompt)
     
     url = f"https://image.pollinations.ai/prompt/{prompt_encoded}?seed={semilla}&width=768&height=512&nologo=true"

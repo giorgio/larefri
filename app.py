@@ -143,14 +143,17 @@ def crear_imagen(plato: str, ingredientes: str) -> bytes | None:
 
 
 def _imagen_ia(r):
-    if not secreto("GEMINI_API_KEY"):
-        return None
-    ings = ", ".join(i.nombre for i in r.ingredientes if not i.basico_de_despensa)
-    try:
-        datos = crear_imagen(r.nombre, ings)
-    except Exception:  # noqa: BLE001
-        return None
-    return {"url": datos, "fuente": "IA"} if datos else None
+    clean_name = re.sub(r"[^a-zA-Z0-9 ]+", "", r.nombre).strip().replace(" ", "_")
+    if secreto("GEMINI_API_KEY"):
+        ings = ", ".join(i.nombre for i in r.ingredientes if not i.basico_de_despensa)
+        try:
+            datos = crear_imagen(r.nombre, ings)
+            if datos:
+                return {"url": datos, "fuente": "IA"}
+        except Exception:
+            pass
+    url_ia = f"https://pollinations.ai/p/delicious_appetizing_gourmet_food_photo_of_{clean_name}?width=500&height=500&nologo=true&seed=42"
+    return {"url": url_ia, "fuente": "IA"}
 
 
 # ---------------------------------------------------------------------------

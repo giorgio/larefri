@@ -71,15 +71,17 @@ def secreto(nombre):
 
 
 def cliente_gemini():
-    try:
-        from google import genai
-        from google.genai import types
-    except ImportError as e:
-        raise n.ErrorIA("Falta google-genai en requirements.txt. Instálalo y vuelve a desplegar.") from e
-    clave = str(secreto("GEMINI_API_KEY") or secreto("GOOGLE_API_KEY") or "").strip().strip("\"'")
+    import os
+    clave = str(
+        st.session_state.get("gemini_key_manual") or
+        secreto("GEMINI_API_KEY") or
+        secreto("GOOGLE_API_KEY") or
+        os.environ.get("GEMINI_API_KEY", "")
+    ).strip().strip('"\'')
     if not clave:
-        raise n.ErrorIA("Falta GEMINI_API_KEY en las Variables de Railway. Agrégala y vuelve a desplegar.")
-    return genai.Client(api_key=clave, http_options=types.HttpOptions(timeout=60000))
+        raise n.ErrorIA("Falta GEMINI_API_KEY en .streamlit/secrets.toml o Variables de entorno de Railway. Agrega tu clave para buscar recetas.")
+    from google import genai
+    return genai.Client(api_key=clave)
 
 
 def esperar_turno():

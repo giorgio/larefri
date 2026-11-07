@@ -1,0 +1,56 @@
+LAREFRI — CORRECCIÓN DE FOTOS FLUX / POLLINATIONS
+Versión: FLUX-POLLINATIONS-09
+
+QUÉ SUBIR
+Este ZIP conserva tu proyecto. Para aplicar esta corrección basta reemplazar
+app.py en GitHub con el app.py que está dentro de la carpeta larefri-main.
+El nombre en GitHub debe ser exactamente app.py, sin espacios ni (1), (2), etc.
+No hace falta subir las copias app (7).py, app (8).py, app (9).py ni app (10).py.
+La corrección de Flux está integrada en app.py; no se añade otro módulo obligatorio.
+
+CONFIGURAR POLLINATIONS
+1. Entra en https://enter.pollinations.ai/keys e inicia sesión.
+2. Crea una clave secreta para el servidor (sk_). Permite el modelo FLUX y revisa
+   su presupuesto y el saldo Pollen disponible. No uses una clave de aplicación pk_.
+3. Railway → servicio larefri → Variables. Añade:
+   Nombre: POLLINATIONS_API_KEY
+   Valor: tu clave secreta de Pollinations.
+   No escribas la clave en GitHub ni la envíes por chat.
+4. Guarda/aplica los cambios y espera a que el despliegue quede activo.
+5. Abre la app de Railway. Al pie debe verse FLUX-POLLINATIONS-09.
+6. Abre «Comprobar recetas e imágenes IA» → «Probar FLUX (foto)».
+   Esta prueba genera una imagen y consume saldo del proveedor.
+
+OPCIONAL
+POLLINATIONS_MODEL permite cambiar el modelo. El valor predeterminado es
+black-forest-labs/flux.1-schnell. Solo elige modelos habilitados en tu cuenta.
+GEMINI_API_KEY sigue siendo la clave de las recetas y reconocimiento de alimentos;
+no sustituye a la de Pollinations.
+
+CORRECCIONES
+- Nueva dirección https://gen.pollinations.ai/image/ con autenticación en cabecera.
+- Identificación correcta de imágenes IA de FLUX en las tarjetas.
+- Errores visibles para clave ausente, autenticación, permisos, saldo y límites.
+- Verificación del formato y la integridad de la foto; no acepta HTML como imagen.
+- No repite peticiones fallidas en cada recarga. Hay un botón de reintento.
+- Muestra cada foto terminada sin esperar a que finalicen todas.
+- Conserva fotos válidas en caché y en la sesión, y usa una semilla estable.
+- Límite local de 30 imágenes correctas diarias por instancia. No sustituye el
+  límite de gasto de Pollinations; la caché y el contador se reinician al desplegar.
+- Se conserva la lógica de recetas y el diseño del ZIP recibido.
+
+VALIDACIÓN
+8 pruebas de integración con transporte HTTP simulado: correctas.
+Streamlit AppTest: arranque sin errores, aviso por falta de clave y foto simulada:
+correctos. Compilación del archivo: correcta.
+No se hizo una generación real: no hay una clave autorizada configurada aquí.
+
+El archivo tests/test_nucleo.py citado en AGENTS.md no existe en el ZIP recibido.
+Su copia en la raíz, test_nucleo.py, falla en una prueba de filtrado por precio
+(línea 67). nucleo.py permanece idéntico al original; es un fallo previo y ajeno
+al cambio de fotos. No se presenta esa suite como aprobada.
+
+DOCUMENTACIÓN DEL PROVEEDOR
+https://gen.pollinations.ai/docs
+https://github.com/pollinations/pollinations/blob/main/gen.pollinations.ai/src/docs/authentication.md
+https://github.com/pollinations/pollinations/blob/main/gen.pollinations.ai/src/docs/image-generation.md

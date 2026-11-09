@@ -746,30 +746,30 @@ _cubo = st.components.v2.component(
     html='<div class="rf-cubo-app"></div>',
     css=r"""
 .rf-cubo-app {display:flex;flex-direction:column;align-items:center;font-family:inherit;user-select:none;-webkit-user-select:none;}
-.rf-escena {width:100%;height:400px;perspective:1000px;display:flex;align-items:center;justify-content:center;
+.rf-escena {width:100%;height:470px;perspective:1200px;display:flex;align-items:center;justify-content:center;
   touch-action:none;cursor:grab;}
 .rf-escena.agarrado {cursor:grabbing;}
-.rf-cubo {width:250px;height:250px;position:relative;transform-style:preserve-3d;transition:transform .45s cubic-bezier(.2,.8,.2,1);}
+.rf-cubo {width:330px;height:330px;position:relative;transform-style:preserve-3d;transition:transform .45s cubic-bezier(.2,.8,.2,1);}
 .rf-cubo.sin-animar {transition:none;}
-.rf-cara {position:absolute;inset:0;border-radius:22px;background:#EE6A12;padding:9px;display:grid;
-  grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(3,minmax(0,1fr));gap:6px;
+.rf-cara {position:absolute;inset:0;border-radius:26px;background:#EE6A12;padding:11px;display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(3,minmax(0,1fr));gap:8px;
   overflow:hidden;box-sizing:border-box;backface-visibility:hidden;
   -webkit-backface-visibility:hidden;box-shadow:inset 0 0 0 2px rgba(255,255,255,.25);}
 .rf-celda {position:relative;box-sizing:border-box;min-width:0;min-height:0;width:100%;height:100%;margin:0;
-  overflow:hidden;overflow-wrap:anywhere;hyphens:auto;border:0;border-radius:12px;background:#fff;color:#171d33;font:inherit;font-size:11.5px;
+  overflow:hidden;overflow-wrap:anywhere;hyphens:auto;border:0;border-radius:12px;background:#fff;color:#171d33;font:inherit;font-size:13.5px;
   font-weight:700;line-height:1.1;padding:3px 2px;display:flex;flex-direction:column;align-items:center;
   justify-content:center;gap:2px;cursor:pointer;text-align:center;}
 .rf-celda span {display:block;max-width:100%;}
-.rf-celda span.e {font-size:22px;line-height:1;}
+.rf-celda span.e {font-size:31px;line-height:1;}
 .rf-celda.verde span.e {filter:hue-rotate(65deg) saturate(1.6) brightness(.95);}
 .rf-celda.on {background:#ffe4d9;box-shadow:inset 0 0 0 2px #ff6047;}
-.rf-celda.on::after {content:'✓';position:absolute;top:3px;right:4px;width:16px;height:16px;border-radius:50%;
-  background:#ff6047;color:#fff;font-size:10px;line-height:16px;}
+.rf-celda.on::after {content:'✓';position:absolute;top:4px;right:5px;width:20px;height:20px;border-radius:50%;
+  background:#ff6047;color:#fff;font-size:12px;line-height:20px;}
 .rf-nombre-cara {position:relative;z-index:5;margin-top:2px;font-weight:800;font-size:15px;color:#171d33;min-height:1.3em;
   background:rgba(255,255,255,.92);padding:2px 12px;border-radius:999px;}
 .rf-ayuda {position:relative;z-index:5;font-size:12.5px;color:#5b6170;margin-top:2px;
   background:rgba(255,255,255,.92);padding:1px 10px;border-radius:999px;}
-@media (max-width: 440px) {.rf-escena {height:350px;} .rf-cubo {transform-origin:center; scale:.86;}}
+@media (max-width: 440px) {.rf-escena {height:380px;} .rf-cubo {transform-origin:center; scale:.82;}}
 """,
     js=r"""
 const POS = ["rotateY(0deg)","rotateY(90deg)","rotateY(180deg)","rotateY(-90deg)","rotateX(90deg)","rotateX(-90deg)"];
@@ -786,7 +786,7 @@ export default function({data, parentElement, setTriggerValue}) {
     data.caras.forEach(([titulo, items], i) => {
       const cara = document.createElement('div');
       cara.className = 'rf-cara';
-      cara.style.transform = POS[i] + ' translateZ(125px)';
+      cara.style.transform = POS[i] + ' translateZ(165px)';
       items.forEach(([nombre, emoji]) => {
         const b = document.createElement('button');
         b.type = 'button';
@@ -864,27 +864,25 @@ export default function({data, parentElement, setTriggerValue}) {
 )
 
 
-def _cambiar_cubo():
-    st.session_state["ver_frutas"] = not st.session_state.get("ver_frutas", False)
-
-
 def cubo_ingredientes():
-    """Un solo cubo a la vez; un botón pasa del de ingredientes al de frutas y de vuelta."""
+    """Un solo cubo a la vez; arriba, unas pestañas eligen entre ingredientes y frutas."""
     marcados = [x for x in _nombres_cubo() if st.session_state.get(_clave_ingrediente(x))]
-    frutas = st.session_state.get("ver_frutas", False)
-    caras, clave = (CUBO_FRUTAS, "cubo_frutas") if frutas else (CUBO, "cubo_ingredientes")
+    otros = {x for _, items in CUBO for x, _ in items}
+    solo_frutas = {x for _, items in CUBO_FRUTAS for x, _ in items} - otros
+    cuentas = {"ingredientes": sum(1 for x in marcados if x in otros),
+               "frutas": sum(1 for x in marcados if x in solo_frutas)}
+    nombres = {"ingredientes": "🥦 Ingredientes", "frutas": "🍓 Frutas"}
+    _, centro, _ = st.columns([1, 2, 1])
+    vista = centro.segmented_control(
+        "Cubo", ["ingredientes", "frutas"], default="ingredientes", key="vista_cubo",
+        format_func=lambda v: nombres[v] + (f" · {cuentas[v]}" if cuentas[v] else ""),
+        label_visibility="collapsed", width="stretch") or "ingredientes"
+    caras, clave = (CUBO_FRUTAS, "cubo_frutas") if vista == "frutas" else (CUBO, "cubo_ingredientes")
+    st.markdown('<style>.st-key-vista_cubo button[aria-checked="true"]{background:#FFE9D6 !important;'
+                'border-color:#EE6A12 !important;color:#B8500C !important;}'
+                '.st-key-vista_cubo button[aria-checked="true"] *{color:#B8500C !important;}</style>', unsafe_allow_html=True)
     _cubo(key=clave, data={"caras": caras, "marcados": marcados},
           on_tocar_change=functools.partial(_alternar_desde_cubo, clave))
-    nombres_frutas = {x for _, items in CUBO_FRUTAS for x, _ in items}
-    otros = {x for _, items in CUBO for x, _ in items}
-    if frutas:
-        cuenta = sum(1 for x in marcados if x in otros)
-        texto, icono = "Volver a ingredientes" + (f" ({cuenta} marcado{'s' if cuenta > 1 else ''})" if cuenta else ""), ":material/arrow_back:"
-    else:
-        cuenta = sum(1 for x in marcados if x in nombres_frutas and x not in otros)
-        texto, icono = "Ir al cubo de frutas" + (f" ({cuenta} marcada{'s' if cuenta > 1 else ''})" if cuenta else ""), ":material/nutrition:"
-    _, centro, _ = st.columns([1, 2, 1])
-    centro.button(texto, icon=icono, key="cambiar_cubo", on_click=_cambiar_cubo, width="stretch")
 
 
 def formulario():

@@ -56,10 +56,10 @@ for _k, _v in INICIALES.items():
 
 
 # Reconsiderar imágenes de versiones que generaban todo con Flux.
-if st.session_state.get("_version_fuentes_fotos") != "flux-ingles-15":
+if st.session_state.get("_version_fuentes_fotos") != "flux-ingles-16":
     st.session_state["_imagenes_ia_recetas"] = {}
     st.session_state["_errores_fotos"] = {}
-    st.session_state["_version_fuentes_fotos"] = "flux-ingles-15"
+    st.session_state["_version_fuentes_fotos"] = "flux-ingles-16"
 
 # Las selecciones previas de botones que cambiaron (Sardina/Arveja, Avena) no pasan a los nuevos.
 if st.session_state.get("_version_botones") != "tortillas":       # Avena -> Tortillas en el botón 23
@@ -149,7 +149,7 @@ def _clave_foto(r):
 
 def _foto_de_fuentes(r):
     ingredientes = ", ".join(i.nombre for i in r.ingredientes)
-    tipica = next((q for k, q in FOTOS_TIPICAS.items() if k in n._clave(r.nombre).replace("fideos", "fideo")), None)
+    tipica = next((FOTOS_TIPICAS[k] for k in _platos_tipicos(r.nombre, FOTOS_TIPICAS)), None)
     if tipica:                       # el nombre en inglés de la IA ("steak") traería otro plato
         consultas = [tipica]
     else:
@@ -218,6 +218,18 @@ PLATOS_TIPICOS = {
                        "(maduro frito) on the side."),
 }
 
+# Si el nombre dice que es OTRO tipo de plato (una sopa de fideos con atún no es "fideos con atún"),
+# la descripción especial no se aplica.
+_OTRO_TIPO = {"sopa", "caldo", "crema", "locro", "consome", "ensalada", "sanduche", "sandwich", "tortilla",
+              "omelette", "arroz", "tacos", "quesadilla", "empanada", "empanadas", "pastel", "pure", "batido"}
+
+
+def _platos_tipicos(nombre, tabla):
+    texto = n._clave(nombre or "").replace("fideos", "fideo")
+    palabras = set(re.findall(r"[a-z]+", texto))
+    return [k for k in tabla if k in texto and not ((palabras & _OTRO_TIPO) - set(k.split()))]
+
+
 # Búsqueda de fotos reales para platos que en inglés se confunden (bistec no es "steak").
 FOTOS_TIPICAS = {
     "bistec": "beef stew with potatoes peas and carrots",
@@ -227,7 +239,7 @@ FOTOS_TIPICAS = {
 
 
 @st.cache_data(ttl=60 * 86400, show_spinner=False, max_entries=300)
-def _prompt_flux_ingles(plato, ingredientes, pasos=(), cocina="", version=15):
+def _prompt_flux_ingles(plato, ingredientes, pasos=(), cocina="", version=16):
     import json
     datos = json.dumps(dict(dish=plato, ingredients=ingredientes,
                             preparation=list(pasos), cuisine=cocina), ensure_ascii=False)
@@ -242,7 +254,7 @@ def _prompt_flux_ingles(plato, ingredientes, pasos=(), cocina="", version=15):
         "For Ecuadorian lentil stew with rice (menestra de lenteja con arroz), describe visible "
         "cooked lentils in a thick brown stew beside a separate portion of plain white rice; "
         "onion, tomato and garlic are cooked into the stew, not raw toppings. "
-        + "".join(" " + nota for clave, nota in PLATOS_TIPICOS.items() if clave in n._clave(plato).replace("fideos", "fideo")) + " "
+        + "".join(" " + PLATOS_TIPICOS[k] for k in _platos_tipicos(plato, PLATOS_TIPICOS)) + " "
         "Natural light, three-quarter angle, realistic food photo, no text, logos, hands or people. "
         "Return only JSON with one string field prompt_english, 50 to 160 English words. "
         "Recipe data: " + datos)
@@ -264,7 +276,7 @@ class _SinTraduccion(Exception):
 
 
 def _prompt_flux_simple(plato, ingredientes):
-    notas = "".join(" " + nota for clave, nota in PLATOS_TIPICOS.items() if clave in n._clave(plato).replace("fideos", "fideo"))
+    notas = "".join(" " + PLATOS_TIPICOS[k] for k in _platos_tipicos(plato, PLATOS_TIPICOS))
     return (f"Realistic food photography of the finished cooked dish \"{plato}\" "
             f"(a recipe made with: {ingredientes}). Served on a plate, three-quarter angle, natural light. "
             "No text, logos, hands or people." + notas)

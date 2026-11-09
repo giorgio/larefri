@@ -56,10 +56,10 @@ for _k, _v in INICIALES.items():
 
 
 # Reconsiderar imágenes de versiones que generaban todo con Flux.
-if st.session_state.get("_version_fuentes_fotos") != "flux-ingles-13":
+if st.session_state.get("_version_fuentes_fotos") != "flux-ingles-14":
     st.session_state["_imagenes_ia_recetas"] = {}
     st.session_state["_errores_fotos"] = {}
-    st.session_state["_version_fuentes_fotos"] = "flux-ingles-13"
+    st.session_state["_version_fuentes_fotos"] = "flux-ingles-14"
 
 # Las selecciones previas de Sardina/Arveja no deben pasar a Res/Camote.
 if st.session_state.get("_version_botones") != "res_camote":
@@ -197,8 +197,17 @@ def _bloqueo_imagen():
     return Lock()
 
 
+# Cómo se ve de verdad cada plato típico (FLUX los confunde). Clave: nombre sin tildes, en minúsculas.
+PLATOS_TIPICOS = {
+    "seco de pollo": ("For Ecuadorian seco de pollo: whole bone-in chicken pieces (legs and thighs, not diced chunks) "
+                      "fully coated in a thick, glossy, reddish-brown braising sauce, like a curry sauce, served beside "
+                      "a mound of yellow rice colored with achiote, and slices of golden fried sweet ripe plantain "
+                      "(maduro frito) on the same plate. No raw peppers, no white rice."),
+}
+
+
 @st.cache_data(ttl=60 * 86400, show_spinner=False, max_entries=300)
-def _prompt_flux_ingles(plato, ingredientes, pasos=(), cocina="", version=13):
+def _prompt_flux_ingles(plato, ingredientes, pasos=(), cocina="", version=14):
     import json
     datos = json.dumps(dict(dish=plato, ingredients=ingredientes,
                             preparation=list(pasos), cuisine=cocina), ensure_ascii=False)
@@ -213,6 +222,7 @@ def _prompt_flux_ingles(plato, ingredientes, pasos=(), cocina="", version=13):
         "For Ecuadorian lentil stew with rice (menestra de lenteja con arroz), describe visible "
         "cooked lentils in a thick brown stew beside a separate portion of plain white rice; "
         "onion, tomato and garlic are cooked into the stew, not raw toppings. "
+        + "".join(" " + nota for clave, nota in PLATOS_TIPICOS.items() if clave in n._clave(plato)) + " "
         "Natural light, three-quarter angle, realistic food photo, no text, logos, hands or people. "
         "Return only JSON with one string field prompt_english, 50 to 160 English words. "
         "Recipe data: " + datos)
@@ -234,9 +244,10 @@ class _SinTraduccion(Exception):
 
 
 def _prompt_flux_simple(plato, ingredientes):
+    notas = "".join(" " + nota for clave, nota in PLATOS_TIPICOS.items() if clave in n._clave(plato))
     return (f"Realistic food photography of the finished cooked dish \"{plato}\" "
             f"(a recipe made with: {ingredientes}). Served on a plate, three-quarter angle, natural light. "
-            "No text, logos, hands or people.")
+            "No text, logos, hands or people." + notas)
 
 
 @st.cache_data(ttl=60 * 86400, show_spinner=False, max_entries=300)
@@ -527,12 +538,38 @@ def tarjeta(r, clave: str, cero: bool):
     with st.container(border=True, key=f"rc_{clave}"):
         mostrar_foto(r, despues=True)
         d.info_receta(r)
-        st.markdown(sello_cero(r) if cero else sello_falta(r), unsafe_allow_html=True)
-        if st.button("Ver receta", key=f"ver_{clave}", icon=":material/menu_book:", type="primary", width="stretch"):
+        with st.container(key=f"pie_{clave}"):      # el pie (sello + botón) va siempre al fondo de la tarjeta
+            st.markdown(sello_cero(r) if cero else sello_falta(r), unsafe_allow_html=True)
+            ver = st.button("Ver receta", key=f"ver_{clave}", icon=":material/menu_book:", type="primary",
+                            width="stretch")
+        if ver:
             st.session_state["abierta"] = r.nombre
         if st.session_state.get("abierta") == r.nombre and not st.session_state.get("_dialogo_puesto"):
             st.session_state["_dialogo_puesto"] = True      # la receta sigue abierta aunque la página se recargue
             ver_receta(r)
+
+
+TARJETAS_PAREJAS = """<style>
+/* Todas las tarjetas de una fila miden lo mismo y el botón queda alineado abajo */
+[data-testid="stHorizontalBlock"]:has([class*="st-key-rc_"]) { align-items: stretch; }
+[data-testid="stColumn"]:has(> [data-testid="stVerticalBlock"] [class*="st-key-rc_"]) > [data-testid="stVerticalBlock"],
+[data-testid="stColumn"] [data-testid="stLayoutWrapper"]:has(> [class*="st-key-rc_"]) { height: 100%; }
+[class*="st-key-rc_"] { height: 100%; display: flex; flex-direction: column; }
+[class*="st-key-rc_"] > [data-testid="stLayoutWrapper"]:has(> [class*="st-key-pie_"]),
+[class*="st-key-rc_"] > [class*="st-key-pie_"] { margin-top: auto; }
+[class*="st-key-rc_"] .sz-nombre { min-height: 2.4em; }
+</style>"""
+
+
+def cuadricula_unica(cero, uno):
+    """Una sola cuadrícula de 3 en 3: primero las de $0, luego las que necesitan 1 cosa."""
+    st.markdown(TARJETAS_PAREJAS, unsafe_allow_html=True)
+    items = [(r, f"c{j}", True) for j, r in enumerate(cero)] + [(r, f"u{j}", False) for j, r in enumerate(uno)]
+    for fila in range(0, len(items), 3):
+        cols = st.columns(3, gap="medium")
+        for j, (r, clave, es_cero) in enumerate(items[fila:fila + 3]):
+            with cols[j]:
+                tarjeta(r, clave, es_cero)
 
 
 def cuadricula(recetas, prefijo: str, cero: bool):
@@ -685,17 +722,11 @@ def resultados():
            f'<small>{len(uno)} necesitan 1 ingrediente más</small></div></div>' if uno else
            f'<div><small>Recetas sin comprar nada</small><b>{len(cero)}</b></div></div>'),
         unsafe_allow_html=True)
-    if cero:
-        # Oración eliminada
-        cuadricula(cero, "c", True)
-    else:
+    if not cero:
         st.info("Con lo que marcaste no salió ninguna receta sin comprar. Agrega uno o dos ingredientes más que "
                 "tengas (un huevo, una papa, un poco de arroz) y vuelve a buscar.")
-    if uno:  # Mostrar las opciones con un faltante, no ocultarlas.
-        st.write("")
-        st.markdown('<p class="sz-seccion">🛒 Si quieres gastar un poquito: te falta solo una cosa</p>',
-                    unsafe_allow_html=True)
-        cuadricula(uno, "u", False)
+    # Una sola cuadrícula: las de $0 primero; cada tarjeta dice si falta algo (no hace falta otra sección).
+    cuadricula_unica(cero, uno)
     st.write("")
     poner_fotos()
     total = len(cero) + len(uno)

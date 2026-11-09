@@ -1,5 +1,5 @@
 LAREFRI — CORRECCIÓN DE FOTOS FLUX / POLLINATIONS
-Versión: FLUX-POLLINATIONS-09
+Versión: REALES-ESPANOL-11
 
 QUÉ SUBIR
 Este ZIP conserva tu proyecto. Para aplicar esta corrección basta reemplazar
@@ -17,7 +17,7 @@ CONFIGURAR POLLINATIONS
    Valor: tu clave secreta de Pollinations.
    No escribas la clave en GitHub ni la envíes por chat.
 4. Guarda/aplica los cambios y espera a que el despliegue quede activo.
-5. Abre la app de Railway. Al pie debe verse FLUX-POLLINATIONS-09.
+5. Abre la app de Railway. Al pie debe verse REALES-ESPANOL-11.
 6. Abre «Comprobar recetas e imágenes IA» → «Probar FLUX (foto)».
    Esta prueba genera una imagen y consume saldo del proveedor.
 
@@ -37,10 +37,20 @@ CORRECCIONES
 - Conserva fotos válidas en caché y en la sesión, y usa una semilla estable.
 - Límite local de 30 imágenes correctas diarias por instancia. No sustituye el
   límite de gasto de Pollinations; la caché y el contador se reinician al desplegar.
-- Se conserva la lógica de recetas y el diseño del ZIP recibido.
+- Se mantiene el diseño y se corrige la selección de seis recetas en total.
+- Ahora las recetas con un ingrediente pendiente se muestran con su aviso; no se ocultan.
+- Se elimina el descarte de platos distintos que comparten un mismo ingrediente faltante.
+- La búsqueda admite cualquier país y favorece variedad entre opciones comparables,
+  manteniendo la proteína elegida como prioridad. No inventa entradas para rellenar.
+- Se consultan primero las fotos de las fuentes conectadas (Unsplash, Pexels cuando
+  haya clave, Wikimedia y recetarios); FLUX queda como respaldo si no hay foto adecuada.
+- El recetario recibido contiene 300 entradas; 187 están etiquetadas como ecuatorianas.
+- Si los filtros o un fallo del proveedor impiden encontrar seis recetas válidas,
+  se muestra lo encontrado y un aviso honesto; no se fabrican tarjetas vacías.
 
 VALIDACIÓN
-8 pruebas de integración con transporte HTTP simulado: correctas.
+21 pruebas de integración, selección, idioma y fotos, sin claves ni consumo: correctas.
+Prueba de interfaz con pollo/arroz: seis tarjetas visibles y caché de fotos reutilizada.
 Streamlit AppTest: arranque sin errores, aviso por falta de clave y foto simulada:
 correctos. Compilación del archivo: correcta.
 No se hizo una generación real: no hay una clave autorizada configurada aquí.
@@ -54,3 +64,18 @@ DOCUMENTACIÓN DEL PROVEEDOR
 https://gen.pollinations.ai/docs
 https://github.com/pollinations/pollinations/blob/main/gen.pollinations.ai/src/docs/authentication.md
 https://github.com/pollinations/pollinations/blob/main/gen.pollinations.ai/src/docs/image-generation.md
+
+ACTUALIZACIÓN REALES-ESPANOL-11
+- Mantiene el nombre dal y otros nombres propios internacionales.
+- Español ecuatoriano/neutro en las instrucciones y descripciones.
+- Detecta también duplicados Campestre, Familiar, Criolla y Rápida.
+- Descarta variaciones de puntuación y orden de palabras en el mismo nombre.
+- Tras un lote repetido continúa buscando una sexta receta, dentro de tres rondas.
+- Un error de red/autenticación en las fuentes no cuenta como ausencia de fotos.
+- Prueba fuentes reales y consultas en inglés/español antes de usar Flux.
+- El botón Reintentar foto vuelve a consultar las fuentes reales primero.
+- Las decisiones de fotos se reinician al comenzar una búsqueda nueva.
+- No garantiza seis recetas si la API no responde o no hay suficientes opciones
+  válidas para los ingredientes/filtros; en ese caso se informa la cantidad real.
+- Prueba de regresión: cinco recetas, un lote duplicado y otro plato adicional
+  terminan en seis recetas distintas. La app abre correctamente en Streamlit AppTest.

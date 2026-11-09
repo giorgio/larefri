@@ -740,7 +740,7 @@ _cubo = st.components.v2.component(
     html='<div class="rf-cubo-app"></div>',
     css=r"""
 .rf-cubo-app {display:flex;flex-direction:column;align-items:center;font-family:inherit;user-select:none;-webkit-user-select:none;}
-.rf-escena {width:100%;height:340px;perspective:1000px;display:flex;align-items:center;justify-content:center;
+.rf-escena {width:100%;height:400px;perspective:1000px;display:flex;align-items:center;justify-content:center;
   touch-action:none;cursor:grab;}
 .rf-escena.agarrado {cursor:grabbing;}
 .rf-cubo {width:250px;height:250px;position:relative;transform-style:preserve-3d;transition:transform .45s cubic-bezier(.2,.8,.2,1);}
@@ -759,9 +759,11 @@ _cubo = st.components.v2.component(
 .rf-celda.on {background:#ffe4d9;box-shadow:inset 0 0 0 2px #ff6047;}
 .rf-celda.on::after {content:'✓';position:absolute;top:3px;right:4px;width:16px;height:16px;border-radius:50%;
   background:#ff6047;color:#fff;font-size:10px;line-height:16px;}
-.rf-nombre-cara {margin-top:2px;font-weight:800;font-size:15px;color:#171d33;min-height:1.3em;}
-.rf-ayuda {font-size:12.5px;color:#5b6170;margin-top:2px;}
-@media (max-width: 440px) {.rf-escena {height:300px;} .rf-cubo {transform-origin:center; scale:.86;}}
+.rf-nombre-cara {position:relative;z-index:5;margin-top:2px;font-weight:800;font-size:15px;color:#171d33;min-height:1.3em;
+  background:rgba(255,255,255,.92);padding:2px 12px;border-radius:999px;}
+.rf-ayuda {position:relative;z-index:5;font-size:12.5px;color:#5b6170;margin-top:2px;
+  background:rgba(255,255,255,.92);padding:1px 10px;border-radius:999px;}
+@media (max-width: 440px) {.rf-escena {height:350px;} .rf-cubo {transform-origin:center; scale:.86;}}
 """,
     js=r"""
 const POS = ["rotateY(0deg)","rotateY(90deg)","rotateY(180deg)","rotateY(-90deg)","rotateX(90deg)","rotateX(-90deg)"];

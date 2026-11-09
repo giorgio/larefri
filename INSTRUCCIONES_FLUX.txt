@@ -1,5 +1,5 @@
 LAREFRI — CORRECCIÓN DE FOTOS FLUX / POLLINATIONS
-Versión: SEIS-INGREDIENTES-12
+Versión: FLUX-INGLES-13
 
 QUÉ SUBIR
 Este ZIP conserva tu proyecto. Para aplicar esta corrección basta reemplazar
@@ -17,7 +17,7 @@ CONFIGURAR POLLINATIONS
    Valor: tu clave secreta de Pollinations.
    No escribas la clave en GitHub ni la envíes por chat.
 4. Guarda/aplica los cambios y espera a que el despliegue quede activo.
-5. Abre la app de Railway. Al pie debe verse SEIS-INGREDIENTES-12.
+5. Abre la app de Railway. Al pie debe verse FLUX-INGLES-13.
 6. Abre «Comprobar recetas e imágenes IA» → «Probar FLUX (foto)».
    Esta prueba genera una imagen y consume saldo del proveedor.
 
@@ -65,7 +65,7 @@ https://gen.pollinations.ai/docs
 https://github.com/pollinations/pollinations/blob/main/gen.pollinations.ai/src/docs/authentication.md
 https://github.com/pollinations/pollinations/blob/main/gen.pollinations.ai/src/docs/image-generation.md
 
-ACTUALIZACIÓN SEIS-INGREDIENTES-12
+ACTUALIZACIÓN FLUX-INGLES-13
 - Mantiene el nombre dal y otros nombres propios internacionales.
 - Español ecuatoriano/neutro en las instrucciones y descripciones.
 - Detecta también duplicados Campestre, Familiar, Criolla y Rápida.
@@ -81,3 +81,5 @@ ACTUALIZACIÓN SEIS-INGREDIENTES-12
   terminan en seis recetas distintas. La app abre correctamente en Streamlit AppTest.
 
 VERSIÓN 12: amplía de 4 a 24 candidatos externos; descarta bases no elegidas antes de reponer hasta seis recetas. No considera básicos los ingredientes principales marcados erróneamente por IA. 25 pruebas focalizadas pasan. Reemplazar app.py y hacer una búsqueda nueva.
+
+VERSIÓN 13: Gemini prepara el prompt de imagen completamente en inglés con ingredientes, preparación y presentación. No reutiliza las imágenes de la versión anterior. Si falla la traducción, muestra aviso y no llama a FLUX. 12 pruebas del cliente de imagen y traducción pasan; no se ha probado con claves reales. Reemplazar app.py, esperar el despliegue y buscar de nuevo.

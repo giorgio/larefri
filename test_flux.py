@@ -56,7 +56,7 @@ class Tests(unittest.TestCase):
                 self.assertTrue(reply.closed)
     def test_image_wrapper_keeps_errors(self):
         fn=next(x for x in TREE.body if isinstance(x,ast.FunctionDef) and x.name=='_imagen_ia')
-        ns={'_flux':f,'crear_imagen':lambda *a: (_ for _ in ()).throw(f.ErrorImagen('Falta clave'))}
+        ns={'_flux':f,'crear_imagen':lambda *a, **kw: (_ for _ in ()).throw(f.ErrorImagen('Falta clave'))}
         exec(compile(ast.Module(body=[fn],type_ignores=[]),'app.py','exec'),ns)
         recipe=types.SimpleNamespace(nombre='Arroz',ingredientes=[])
         self.assertEqual(ns['_imagen_ia'](recipe),{'_error':'Falta clave'})

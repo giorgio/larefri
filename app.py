@@ -352,6 +352,7 @@ FOTOS_TIPICAS = {
     "bistec": "beef stew with potatoes peas and carrots",
     "seco de pollo": "chicken stew with yellow rice",
     "fideo con atun": "spaghetti with tuna mayonnaise and bell peppers",
+    "arroz con choclo": "creamy rice with corn and cheese",
 }
 
 

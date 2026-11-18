@@ -160,6 +160,21 @@ def _buscar_hasta_seis(cliente, tiene, personas, tiempo, dieta="Todas", categori
 
 
 c.buscar_con_lo_que_hay = _buscar_hasta_seis
+# Primero las recetas de $0; las de "te falta 1 cosa" solo completan hasta llegar a 6.
+_seleccionar_original = c.seleccionar_seis
+
+
+def _seleccionar_cero_primero(cero, uno, tiene, cantidad=6):
+    solo_cero, _ = _seleccionar_original(cero, [], tiene, cantidad)
+    faltan = cantidad - len(solo_cero)
+    if faltan <= 0 or not uno:
+        return solo_cero, []
+    _, con_uno = _seleccionar_original(solo_cero, uno, tiene, cantidad)
+    return solo_cero, con_uno[:faltan]
+
+
+c.seleccionar_seis = _seleccionar_cero_primero
+
 ICONO = os.path.join(os.path.dirname(os.path.abspath(__file__)), "icono.png")
 st.set_page_config(page_title="larefri.", page_icon=ICONO if os.path.exists(ICONO) else "🧊", layout="wide")
 
@@ -836,7 +851,7 @@ def buscar(mas=False):
         s["_errores_fotos"] = {}
     tiene = lo_que_tiene()
     pedido = dict(tiene=tiene, personas=s["personas_in"], tiempo=s["tiempo_in"], dieta=s.get("dieta_in", "Todas"),
-                  categoria="" if s["tipo_in"] == "Cualquiera" else s["tipo_in"], permitir=False,
+                  categoria="" if s["tipo_in"] == "Cualquiera" else s["tipo_in"], permitir=true,
                   basicos=list(s.get("basicos") or []), creativo=bool(s.get("creativo")))
     excluir = [r.nombre for r in s["cero"] + s["uno"]] if mas else []
     gratis = c.hay_suficiente_en_memoria(pedido["tiene"], pedido["personas"], pedido["tiempo"],

@@ -338,6 +338,48 @@ def _buscar_foto_mejor(consulta, clave_pexels=None, clave_unsplash=None, verific
 
 _buscar_foto_original = fotos.buscar_foto
 fotos.buscar_foto = _buscar_foto_mejor
+# --- Recetas: platos sin base valen; lo que falta no puede ser el plato mismo --------
+
+def _compatible_sin_obligar_base(r, tiene):
+    """No cambia la base elegida por otra que habría que comprar (arroz -> fideo),
+    pero un plato sin base (choclo con queso, sopa de choclo) sí vale."""
+    if not c.ingredientes_aprovechados(r, tiene):
+        return False
+    elegidas = set().union(*(c._bases(x) for x in tiene))
+    if not elegidas:
+        return True
+    usadas = set().union(*(c._bases(i.nombre) for i in r.ingredientes))
+    return not ((usadas | c._bases(r.nombre)) - elegidas)
+
+
+c.compatible_con_seleccion = _compatible_sin_obligar_base
+
+_llamar_original = n.llamar_gemini
+
+
+def _llamar_sin_base_obligatoria(cliente, prompt, *args, **kwargs):
+    # A Gemini se le pedía usar SIEMPRE la base elegida; ahora también acepta platos sin base.
+    if isinstance(prompt, str):
+        prompt = prompt.replace(
+            "usa alguna de las bases elegidas.",
+            "no uses otra base distinta; también valen platos sin base (por ejemplo, choclo con queso).")
+    return _llamar_original(cliente, prompt, *args, **kwargs)
+
+
+n.llamar_gemini = _llamar_sin_base_obligatoria
+
+_faltantes_antes = c.faltantes
+
+
+def _faltantes_sin_plato_principal(r, tiene):
+    """Si lo que falta está en el nombre del plato (arroz con HUEVO sin huevo), es el plato mismo: se descarta."""
+    falta = _faltantes_antes(r, tiene)
+    if len(falta) == 1 and c._palabras(falta[0]) & c._palabras(r.nombre):
+        return falta * 2
+    return falta
+
+
+c.faltantes = _faltantes_sin_plato_principal
 
 ICONO = os.path.join(os.path.dirname(os.path.abspath(__file__)), "icono.png")
 st.set_page_config(page_title="larefri.", page_icon=ICONO if os.path.exists(ICONO) else "🧊", layout="wide")

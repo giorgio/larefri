@@ -114,7 +114,7 @@ def _nombre_para_flux(r):
 
 # --- Siempre 6 recetas ---------------------------------------------------------
 
-RESERVA = 3  # recetas extra que se piden por si los filtros descartan alguna
+RESERVA = 1  # recetas extra que se piden por si los filtros descartan alguna
 
 if "de reserva" not in c.PROMPT_CASA:
     c.PROMPT_CASA = c.PROMPT_CASA.replace(
@@ -127,8 +127,7 @@ _faltantes_original = c.faltantes
 
 
 def _faltantes_con_proteina(r, tiene):
-    """Si lo único que falta es la proteína principal, la receta se descartaba al final.
-    Contarla como descartada desde el principio hace que la app busque otra a tiempo."""
+    """Si lo único que falta es la proteína principal, la receta se descarta desde el principio."""
     falta = _faltantes_original(r, tiene)
     if len(falta) == 1 and c._PROTEINA.search(n._clave(falta[0])):
         return falta * 2
@@ -136,8 +135,8 @@ def _faltantes_con_proteina(r, tiene):
 
 
 c.faltantes = _faltantes_con_proteina
-# Si después de todo salen menos de 6, se hace una segunda ronda corta
-# pidiendo platos distintos a los que ya salieron, y se completan las 6.
+
+# Si salen menos de 6, una segunda ronda pide platos distintos a los que ya salieron.
 _buscar_original = c.buscar_con_lo_que_hay
 
 
@@ -160,6 +159,7 @@ def _buscar_hasta_seis(cliente, tiene, personas, tiempo, dieta="Todas", categori
 
 
 c.buscar_con_lo_que_hay = _buscar_hasta_seis
+
 # Primero las recetas de $0; las de "te falta 1 cosa" solo completan hasta llegar a 6.
 _seleccionar_original = c.seleccionar_seis
 
@@ -175,6 +175,18 @@ def _seleccionar_cero_primero(cero, uno, tiene, cantidad=6):
 
 c.seleccionar_seis = _seleccionar_cero_primero
 
+# --- Diagnóstico: cuando una búsqueda falla, el error real queda en los logs de Railway ---
+import traceback as _tb
+_error_gemini_original = n.error_gemini
+
+
+def _error_gemini_con_registro(e):
+    print("[arreglo] error en la búsqueda:", repr(e), flush=True)
+    _tb.print_exception(type(e), e, e.__traceback__)
+    return _error_gemini_original(e)
+
+
+n.error_gemini = _error_gemini_con_registro
 ICONO = os.path.join(os.path.dirname(os.path.abspath(__file__)), "icono.png")
 st.set_page_config(page_title="larefri.", page_icon=ICONO if os.path.exists(ICONO) else "🧊", layout="wide")
 
@@ -851,7 +863,7 @@ def buscar(mas=False):
         s["_errores_fotos"] = {}
     tiene = lo_que_tiene()
     pedido = dict(tiene=tiene, personas=s["personas_in"], tiempo=s["tiempo_in"], dieta=s.get("dieta_in", "Todas"),
-                  categoria="" if s["tipo_in"] == "Cualquiera" else s["tipo_in"], permitir=true,
+                  categoria="" if s["tipo_in"] == "Cualquiera" else s["tipo_in"], permitir=True,
                   basicos=list(s.get("basicos") or []), creativo=bool(s.get("creativo")))
     excluir = [r.nombre for r in s["cero"] + s["uno"]] if mas else []
     gratis = c.hay_suficiente_en_memoria(pedido["tiene"], pedido["personas"], pedido["tiempo"],

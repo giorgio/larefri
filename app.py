@@ -44,7 +44,98 @@ import casa as c
 import diseno as d
 import fotos
 import nucleo as n
+# ===========================================================================
+# ARREGLOS: fotos que sí corresponden a la receta + siempre 6 recetas
+# ===========================================================================
 
+# --- Fotos -------------------------------------------------------------------
+
+# Palabras en español que no dicen qué plato es ("arroz CON pollo").
+fotos.NO_PLATO |= {"con", "del", "los", "las", "para", "una", "sin", "casero", "casera", "estilo"}
+
+
+def _hay_palabra(palabra, texto, plurales=True):
+    """Palabra completa: 'egg' ya no cuenta dentro de 'eggplant', ni 'rice' dentro de 'price'."""
+    palabra = (palabra or "").strip()
+    if not palabra:
+        return False
+    fin = r"(?:s|es|e|y|ies)?" if plurales else r"s?"
+    return re.search(r"\b" + re.escape(palabra) + fin + r"\b", texto) is not None
+
+
+def _choca_foto(t, palabras):
+    """La base (arroz, fideo...) y la proteína de la foto deben ser las de la receta."""
+    q = " ".join(palabras)
+    bases, proteinas = fotos.GRUPOS
+    for grupo, estricto in ((bases, False), (proteinas, True)):
+        en_receta = {k for k, vs in grupo.items() if any(_hay_palabra(v, q) for v in vs)}
+        en_foto = {k for k, vs in grupo.items() if any(_hay_palabra(v, t) for v in vs)}
+        if en_receta and not (en_receta & en_foto):
+            return True
+        extra = en_foto - en_receta
+        if extra and (en_receta or estricto):
+            return True
+    return False
+
+
+def _es_del_plato_foto(titulo, palabras, minimo=None):
+    t = (titulo or "").lower().replace("_", " ").replace("-", " ")
+    if any(_hay_palabra(x, t, plurales=False) for x in fotos.NO_ES_PLATO):
+        return False
+    if _choca_foto(t, palabras):
+        return False
+    tipos = [w for w in palabras if w in fotos.TIPO_PLATO]
+    if tipos and not any(_hay_palabra(fotos._raiz(w), t) for w in tipos):
+        return False
+    raices = {fotos._raiz(w) for w in palabras} - {""}
+    aciertos = sum(1 for r in raices if _hay_palabra(r, t))
+    if minimo is None:
+        minimo = 2 if len(raices) >= 2 else 1
+    return aciertos >= minimo
+
+
+def _texto_unsplash_foto(f):
+    # Sin las etiquetas de Unsplash: son genéricas y hacían pasar fotos de otros platos.
+    return " ".join([f.get("alt_description") or "", f.get("description") or ""]).lower()
+
+
+fotos.es_del_plato = _es_del_plato_foto
+fotos._choca = _choca_foto
+fotos._texto_unsplash = _texto_unsplash_foto
+
+
+def _nombre_para_flux(r):
+    """FLUX entiende inglés: se le da el nombre en inglés de la receta y el español entre paréntesis."""
+    ingles = (getattr(r, "busqueda_foto", "") or "").strip()
+    if ingles and not ingles.startswith(("url:", "mealdb:")):
+        return f"{ingles} ({r.nombre})"
+    return r.nombre
+
+
+# --- Siempre 6 recetas ---------------------------------------------------------
+
+RESERVA = 3  # recetas extra que se piden por si los filtros descartan alguna
+
+if "de reserva" not in c.PROMPT_CASA:
+    c.PROMPT_CASA = c.PROMPT_CASA.replace(
+        "Propón {n} recetas distintas",
+        f"Propón {{n}} recetas distintas (y {RESERVA} más de reserva: {{n}} + {RESERVA} en total)", 1)
+if "de reserva" not in c.PROMPT_CASA:
+    print("[arreglo] No se pudo ajustar PROMPT_CASA para pedir recetas de reserva", flush=True)
+
+_faltantes_original = c.faltantes
+
+
+def _faltantes_con_proteina(r, tiene):
+    """Si lo único que falta es la proteína principal, la receta se descartaba al final.
+    Contarla como descartada desde el principio hace que la app busque otra a tiempo."""
+    falta = _faltantes_original(r, tiene)
+    if len(falta) == 1 and c._PROTEINA.search(n._clave(falta[0])):
+        return falta * 2
+    return falta
+
+
+c.faltantes = _faltantes_con_proteina
 ICONO = os.path.join(os.path.dirname(os.path.abspath(__file__)), "icono.png")
 st.set_page_config(page_title="larefri.", page_icon=ICONO if os.path.exists(ICONO) else "🧊", layout="wide")
 
@@ -321,7 +412,7 @@ def _imagen_ia(r):
     try:
         # Incluir todos los ingredientes: también las salsas/básicos afectan el aspecto.
         ingredientes = ", ".join(i.nombre for i in r.ingredientes)
-        datos = crear_imagen(r.nombre, ingredientes or "ingredientes de la receta",
+        datos = crear_imagen(_nombre_para_flux(r), ingredientes or "ingredientes de la receta",
                              pasos=tuple(getattr(r, "pasos", ())), cocina=getattr(r, "cocina", ""))
         import base64
         return {"url": f"data:{n.mime_imagen(datos)};base64,{base64.b64encode(datos).decode('ascii')}",

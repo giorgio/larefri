@@ -187,6 +187,158 @@ def _error_gemini_con_registro(e):
 
 
 n.error_gemini = _error_gemini_con_registro
+# --- Fotos: TODAS las fuentes buscan a la vez y se elige la más propicia ------
+import base64 as _b64f
+import math as _math
+from concurrent.futures import ThreadPoolExecutor as _Hilos
+
+BONO_FUENTE = {"TheMealDB": 0.6, "Unsplash": 0.3, "Pexels": 0.3, "Pixabay": 0.2,
+               "Wikimedia Commons": 0.0, "Openverse": 0.0}
+
+
+def _bajar_como_data_url(url):
+    """Descarga la imagen y la incrusta (Pixabay no permite enlazar sus fotos directo)."""
+    r = requests.get(url, timeout=6, headers={"User-Agent": fotos.USER_AGENT})
+    r.raise_for_status()
+    datos = r.content
+    if not datos or len(datos) > 5 * 1024 * 1024:
+        raise fotos.ErrorFuente("Imagen vacía o demasiado grande.")
+    return f"data:{n.mime_imagen(datos)};base64,{_b64f.b64encode(datos).decode('ascii')}"
+
+
+def _cand_mealdb(consulta, claves):
+    f = fotos.foto_mealdb(consulta)
+    if f:
+        f["_titulo"] = consulta  # TheMealDB solo responde si el nombre coincide con el plato
+    return [f] if f else []
+
+
+def _cand_unsplash(consulta, claves):
+    if not claves.get("unsplash"):
+        return []
+    lista = fotos.candidatos_unsplash(consulta, claves["unsplash"], maximo=5)
+    for f in lista:
+        crudo = f.get("_crudo") or {}
+        f["_titulo"] = _texto_unsplash_foto(crudo)
+        f["_likes"] = crudo.get("likes") or 0
+    return lista
+
+
+def _cand_pexels(consulta, claves):
+    if not claves.get("pexels"):
+        return []
+    f = fotos.foto_pexels(consulta, claves["pexels"])
+    return [f] if f else []
+
+
+def _cand_pixabay(consulta, claves):
+    if not claves.get("pixabay"):
+        return []
+    r = requests.get("https://pixabay.com/api/", timeout=5, params={
+        "key": claves["pixabay"], "q": consulta[:100], "image_type": "photo", "category": "food",
+        "orientation": "horizontal", "safesearch": "true", "per_page": 20})
+    if r.status_code != 200:
+        raise fotos.ErrorFuente(f"Pixabay respondió {r.status_code}.")
+    out = []
+    for h in (r.json().get("hits") or [])[:10]:
+        if not h.get("webformatURL"):
+            continue
+        out.append({"url": None, "_descargar": h["webformatURL"], "url_chica": h["webformatURL"],
+                    "autor": h.get("user") or "Pixabay", "pagina": h.get("pageURL") or "https://pixabay.com",
+                    "licencia": "", "licencia_url": "", "fuente": "Pixabay",
+                    "fuente_url": "https://pixabay.com",
+                    "_titulo": (h.get("tags") or "").replace(",", " "), "_likes": h.get("likes") or 0})
+    return out
+
+
+def _cand_wikimedia(consulta, claves):
+    f = fotos.foto_commons(consulta)
+    return [f] if f else []
+
+
+def _cand_openverse(consulta, claves):
+    r = requests.get("https://api.openverse.org/v1/images/", timeout=6,
+                     headers={"User-Agent": fotos.USER_AGENT},
+                     params={"q": consulta, "license_type": "commercial", "page_size": 20})
+    if r.status_code != 200:
+        raise fotos.ErrorFuente(f"Openverse respondió {r.status_code}.")
+    out = []
+    for x in (r.json().get("results") or [])[:10]:
+        url = x.get("thumbnail") or x.get("url")
+        if not url:
+            continue
+        texto = " ".join([x.get("title") or ""] + [t.get("name", "") for t in (x.get("tags") or [])])
+        licencia = f"{str(x.get('license') or '').upper()} {x.get('license_version') or ''}".strip()
+        out.append({"url": url, "url_chica": url, "autor": x.get("creator") or "Autor",
+                    "pagina": x.get("foreign_landing_url") or "https://openverse.org",
+                    "licencia": licencia, "licencia_url": x.get("license_url") or "",
+                    "fuente": "Openverse", "fuente_url": "https://openverse.org", "_titulo": texto})
+    return out
+
+
+FUENTES_FOTO = (_cand_mealdb, _cand_unsplash, _cand_pexels, _cand_pixabay, _cand_wikimedia, _cand_openverse)
+
+
+def _puntaje_foto(f, palabras):
+    """Más alto = más propicia: nombra más partes del plato, se ve servida, buena fuente y popular."""
+    texto = (f.get("_titulo") or "").lower()
+    raices = {fotos._raiz(w) for w in palabras} - {""}
+    cobertura = (sum(1 for r in raices if _hay_palabra(r, texto)) / len(raices)) if raices else 0
+    servida = sum(1 for g in fotos.GASTRO if _hay_palabra(g, texto, plurales=False))
+    likes = f.get("_likes") or 0
+    return (2.0 * cobertura + 0.1 * min(servida, 3) + BONO_FUENTE.get(f.get("fuente"), 0)
+            + min(0.3, _math.log10(likes + 1) / 10))
+
+
+def _buscar_foto_mejor(consulta, clave_pexels=None, clave_unsplash=None, verificar=None):
+    """Todas las fuentes buscan a la vez; se juntan las candidatas y gana la más propicia."""
+    if not consulta:
+        return None
+    if consulta.startswith("url:"):  # foto fija elegida a mano: se usa tal cual
+        return _buscar_foto_original(consulta, clave_pexels, clave_unsplash, verificar)
+    consulta = consulta.removeprefix("mealdb:")
+    claves = {"unsplash": clave_unsplash, "pexels": clave_pexels,
+              "pixabay": str(secreto("PIXABAY_API_KEY") or "").strip()}
+    palabras = fotos.palabras_plato(consulta)
+    candidatas, fallos = [], 0
+    with _Hilos(max_workers=len(FUENTES_FOTO)) as hilos:
+        trabajos = {hilos.submit(fuente, consulta, claves): fuente for fuente in FUENTES_FOTO}
+        for trabajo, fuente in trabajos.items():
+            try:
+                candidatas += [f for f in (trabajo.result() or []) if f]
+            except Exception as e:
+                fallos += 1
+                print(f"[foto] {fuente.__name__} falló: {type(e).__name__}", flush=True)
+    # Solo compiten las que de verdad son el plato (mismas reglas estrictas de antes).
+    validas = [f for f in candidatas
+               if f.get("fuente") in ("TheMealDB", "Wikimedia Commons")
+               or _es_del_plato_foto(f.get("_titulo"), palabras)]
+    validas.sort(key=lambda f: _puntaje_foto(f, palabras), reverse=True)
+    for f in validas[:6]:
+        if verificar:
+            try:
+                ok = verificar(f.get("url_chica") or f.get("_descargar") or f["url"])
+            except Exception:
+                ok = None
+            if ok is False:
+                continue
+        try:
+            if f.get("_descargar"):
+                f["url"] = _bajar_como_data_url(f["_descargar"])
+        except Exception:
+            continue
+        if f.get("fuente") == "Unsplash" and clave_unsplash:
+            fotos.avisar_descarga(f.get("_crudo") or {}, clave_unsplash)
+        print(f"[foto] {consulta!r}: ganó {f.get('fuente')} entre {len(validas)} candidatas", flush=True)
+        return {k: v for k, v in f.items() if not k.startswith("_")}
+    if fallos:
+        raise fotos.ErrorFuente("No se pudo completar la búsqueda de fotos reales.")
+    return None
+
+
+_buscar_foto_original = fotos.buscar_foto
+fotos.buscar_foto = _buscar_foto_mejor
+
 ICONO = os.path.join(os.path.dirname(os.path.abspath(__file__)), "icono.png")
 st.set_page_config(page_title="larefri.", page_icon=ICONO if os.path.exists(ICONO) else "🧊", layout="wide")
 

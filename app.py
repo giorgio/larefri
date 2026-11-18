@@ -136,6 +136,30 @@ def _faltantes_con_proteina(r, tiene):
 
 
 c.faltantes = _faltantes_con_proteina
+# Si después de todo salen menos de 6, se hace una segunda ronda corta
+# pidiendo platos distintos a los que ya salieron, y se completan las 6.
+_buscar_original = c.buscar_con_lo_que_hay
+
+
+def _buscar_hasta_seis(cliente, tiene, personas, tiempo, dieta="Todas", categoria="",
+                       permitir_faltante=True, excluir=(), cantidad=c.POR_BUSQUEDA,
+                       basicos=None, creativo=False):
+    cero, uno = _buscar_original(cliente, tiene, personas, tiempo, dieta, categoria, permitir_faltante,
+                                 excluir=excluir, cantidad=cantidad, basicos=basicos, creativo=creativo)
+    if len(cero) + len(uno) < cantidad and cliente is not None:
+        try:
+            ya = list(excluir) + [r.nombre for r in list(cero) + list(uno)]
+            mas_cero, mas_uno = _buscar_original(cliente, tiene, personas, tiempo, dieta, categoria,
+                                                 permitir_faltante, excluir=ya, cantidad=cantidad,
+                                                 basicos=basicos, creativo=creativo)
+            cero, uno = c.seleccionar_seis(list(cero) + list(mas_cero), list(uno) + list(mas_uno),
+                                           tiene, cantidad)
+        except Exception as e:  # si falla la segunda ronda, se quedan las que ya había
+            print(f"[arreglo] segunda ronda falló: {type(e).__name__}", flush=True)
+    return cero, uno
+
+
+c.buscar_con_lo_que_hay = _buscar_hasta_seis
 ICONO = os.path.join(os.path.dirname(os.path.abspath(__file__)), "icono.png")
 st.set_page_config(page_title="larefri.", page_icon=ICONO if os.path.exists(ICONO) else "🧊", layout="wide")
 
@@ -811,7 +835,7 @@ def buscar(mas=False):
         s["_errores_fotos"] = {}
     tiene = lo_que_tiene()
     pedido = dict(tiene=tiene, personas=s["personas_in"], tiempo=s["tiempo_in"], dieta=s.get("dieta_in", "Todas"),
-                  categoria="" if s["tipo_in"] == "Cualquiera" else s["tipo_in"], permitir=True,
+                  categoria="" if s["tipo_in"] == "Cualquiera" else s["tipo_in"], permitir=False,
                   basicos=list(s.get("basicos") or []), creativo=bool(s.get("creativo")))
     excluir = [r.nombre for r in s["cero"] + s["uno"]] if mas else []
     gratis = c.hay_suficiente_en_memoria(pedido["tiene"], pedido["personas"], pedido["tiempo"],

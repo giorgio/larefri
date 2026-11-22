@@ -2,6 +2,8 @@ import os
 from typing import Any
 import pandas as pd
 import streamlit as st
+print("ENV-CHECK POLLINATIONS:", "OK" if os.environ.get("sk_E2kVdvA4QZGNrjzIZhDowvkKjvoTrdIK") else "FALTA", flush=True)
+
 
 st.set_page_config(
     page_title="larefri · Ranking de Recetas por Ingredientes",

@@ -39,7 +39,7 @@ import time
 
 import requests
 import streamlit as st
-
+print("ENV-CHECK POLLINATIONS:", "OK" if os.environ.get("POLLINATIONS_API_KEY") else "FALTA", flush=True)
 import casa as c
 import diseno as d
 import fotos

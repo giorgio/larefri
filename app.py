@@ -384,9 +384,14 @@ c.faltantes = _faltantes_sin_plato_principal
 ICONO = os.path.join(os.path.dirname(os.path.abspath(__file__)), "icono.png")
 st.set_page_config(page_title="larefri.", page_icon=ICONO if os.path.exists(ICONO) else "🧊", layout="wide")
 
-# --- Diagnóstico temporal: ¿Railway entrega la variable de entorno? (quitar después) ---
+# --- Diagnóstico temporal: ¿Railway entrega las variables de entorno? (quitar después) ---
 _v_poll = os.environ.get("POLLINATIONS_API_KEY")
-st.warning("ENV-CHECK: " + (f"OK, largo {len(_v_poll)}, empieza con '{_v_poll[:5]}'" if _v_poll else "FALTA — la variable no llega"))
+_parecidas = sorted(k for k in os.environ if "POLL" in k.upper())
+st.warning(
+    "ENV-CHECK → POLLINATIONS_API_KEY: " + ("OK" if _v_poll else "FALTA")
+    + " | GEMINI_API_KEY: " + ("OK" if os.environ.get("GEMINI_API_KEY") else "FALTA")
+    + " | vars con 'POLL': " + (", ".join(_parecidas) if _parecidas else "ninguna")
+)
 
 ESPERA_ENTRE_CONSULTAS = 1
 POR_PAGINA = 6
